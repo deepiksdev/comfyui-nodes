@@ -1,0 +1,8 @@
+.DS_Store
+user/comfyui.db
+user/__manager/config.ini
+output/*
+*.log
+models/*
+user/__manager/*
+user/default/comfy.settings.json
