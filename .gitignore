@@ -6,3 +6,4 @@ output/*
 models/*
 user/__manager/*
 user/default/comfy.settings.json
+.env
