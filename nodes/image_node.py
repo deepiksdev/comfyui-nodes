@@ -2254,7 +2254,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Hidreamfull_deepgen": "HidreamFull (deepgen)",
     "FluxPro_deepgen": "Flux Pro (deepgen)",
     "FluxDev_deepgen": "Flux Dev (deepgen)",
-    "FluxSchnell_deepgen": "Flux Schnell (deepgen)",
+    "FluxSchnell_deepgen": "Flux Schnell (deepgennnn)",
     "FluxPro11_deepgen": "Flux Pro 1.1 (deepgen)",
     "FluxPro1Fill_deepgen": "Flux Pro 1 Fill (deepgen)",
     "FluxUltra_deepgen": "Flux Ultra (deepgen)",
