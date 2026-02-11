@@ -10,25 +10,13 @@ class LLMNode:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "model": (
-                    [
-                        "google/gemini-2.5-flash",
-                        "anthropic/claude-sonnet-4.5",
-                        "openai/gpt-4.1",
-                        "openai/gpt-oss-120b",
-                        "meta-llama/llama-4-maverick",
-                        "Custom",
-                    ],
-                    {"default": "google/gemini-2.5-flash"},
-                ),
+                "alias_id": ("STRING", {"default": ""}),
+            },
+            "optional": {
                 "system_prompt": ("STRING", {"default": "", "multiline": True}),
                 "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
                 "reasoning": ("BOOLEAN", {"default": False}),
-            },
-            "optional": {
                 "max_tokens": ("INT", {"default": 0, "min": 0, "max": 100000}),
-                "custom_model_name": ("STRING", {"default": "", "multiline": False}),
-                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
