@@ -10,26 +10,14 @@ class VLMNode:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "model": (
-                    [
-                        "google/gemini-2.5-flash",
-                        "anthropic/claude-sonnet-4.5",
-                        "openai/gpt-4o",
-                        "qwen/qwen3-vl-235b-a22b-instruct",
-                        "x-ai/grok-4-fast",
-                        "Custom",
-                    ],
-                    {"default": "google/gemini-2.5-flash"},
-                ),
-                "system_prompt": ("STRING", {"default": "", "multiline": True}),
                 "image": ("IMAGE",),
-                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
-                "reasoning": ("BOOLEAN", {"default": False}),
+                "alias_id": ("STRING", {"default": "deepgen/openrouter/router/vision"}),
             },
             "optional": {
-                "max_tokens": ("INT", {"default": 0, "min": 0, "max": 100000}),
-                "custom_model_name": ("STRING", {"default": "", "multiline": False}),
-                "alias_id": ("STRING", {"default": ""}),
+                "system_prompt": ("STRING", {"default": "", "multiline": True}),
+                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
+                "reasoning": ("BOOLEAN", {"default": False}),
+                "max_tokens": ("INT", {"default": 1024, "min": 0, "max": 100000}),
             },
         }
 
@@ -37,16 +25,8 @@ class VLMNode:
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/VLM"
 
-    def generate_text(self, prompt, model, system_prompt, image, temperature, reasoning, max_tokens=0, custom_model_name="", alias_id=None):
+    def generate_text(self, prompt, image, alias_id, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024):
         try:
-            # Handle custom model selection
-            if model == "Custom":
-                if not custom_model_name or custom_model_name.strip() == "":
-                    return DeepGenApiHandler.handle_text_generation_error(
-                        "Custom", "Custom model name is required when 'Custom' is selected"
-                    )
-                model = custom_model_name.strip()
-
             # Handle multiple images - image can be a batch
             image_urls = []
 
@@ -58,7 +38,7 @@ class VLMNode:
                     image_url = ImageUtils.upload_image(single_image)
                     if not image_url:
                         return DeepGenApiHandler.handle_text_generation_error(
-                            model, f"Failed to upload image {i+1}"
+                            alias_id, f"Failed to upload image {i+1}"
                         )
                     image_urls.append(image_url)
             else:
@@ -66,12 +46,11 @@ class VLMNode:
                 image_url = ImageUtils.upload_image(image)
                 if not image_url:
                     return DeepGenApiHandler.handle_text_generation_error(
-                        model, "Failed to upload image"
+                        alias_id, "Failed to upload image"
                     )
                 image_urls.append(image_url)
 
             arguments = {
-                "model": model,
                 "prompt": prompt,
                 "system_prompt": system_prompt,
                 "image_urls": image_urls,
@@ -84,13 +63,11 @@ class VLMNode:
             if max_tokens > 0:
                 arguments["max_tokens"] = max_tokens
 
-            result = DeepGenApiHandler.submit_and_get_result(
-                alias_id if alias_id else "deepgen/openrouter/router/vision", arguments
-            )
+            result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments)
             text_result = ResultProcessor.process_text_result(result)
             return (text_result[0],)
         except Exception as e:
-            return DeepGenApiHandler.handle_text_generation_error(model, str(e))
+            return DeepGenApiHandler.handle_text_generation_error(alias_id, str(e))
 
 
 # Node class mappings
