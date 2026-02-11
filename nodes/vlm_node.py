@@ -87,7 +87,8 @@ class VLMNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/openrouter/router/vision", arguments
             )
-            return (result["output"],)
+            text_result = ResultProcessor.process_text_result(result)
+            return (text_result[0],)
         except Exception as e:
             return DeepGenApiHandler.handle_text_generation_error(model, str(e))
 

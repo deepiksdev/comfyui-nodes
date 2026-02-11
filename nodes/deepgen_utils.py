@@ -222,30 +222,67 @@ class ResultProcessor:
     """Utility functions for processing API results."""
 
     @staticmethod
+    def _extract_image_urls(result):
+        """Helper to extract image URLs from various possible response structures."""
+        urls = []
+        
+        def search(obj):
+            if isinstance(obj, dict):
+                # Check for direct URL in this dict (DeepGen/FAL common pattern)
+                url = obj.get("url")
+                if isinstance(url, str) and (url.startswith("http") or url.startswith("data:image")):
+                    # Validate it's likely an image if mimeType is present
+                    mime = obj.get("mimeType", "")
+                    if not mime or "image" in mime:
+                        urls.append(url)
+                        return # Found a leaf, stop searching this branch
+
+                # Search common container keys
+                for key in ["images", "attachments", "results", "image", "output", "data"]:
+                    if key in obj:
+                        search(obj[key])
+                
+                # If we still haven't found much, maybe it's nested in a message-like structure
+                for key, value in obj.items():
+                    if key not in ["images", "attachments", "results", "image", "output", "data"]:
+                        if isinstance(value, (dict, list)):
+                            search(value)
+
+            elif isinstance(obj, list):
+                for item in obj:
+                    search(item)
+            elif isinstance(obj, str):
+                # Direct string URL
+                if obj.startswith("http") and any(ext in obj.lower() for ext in [".jpg", ".jpeg", ".png", ".webp", ".gif"]):
+                    urls.append(obj)
+
+        search(result)
+        # Deduplicate while preserving order
+        seen = set()
+        return [x for x in urls if not (x in seen or seen.add(x))]
+
+    @staticmethod
     def process_image_result(result):
         """Process image generation result and return tensor."""
         try:
-            images = []
-            # DeepGen response structure might differ. Assuming similar to FAL for now:
-            # {"images": [{"url": "..."}]}
+            image_urls = ResultProcessor._extract_image_urls(result)
             
-            image_list = result.get("images", [])
-            # Also handle single "image" key
-            if "image" in result and not image_list:
-                image_list = [result["image"]]
-                
-            for img_info in image_list:
-                img_url = img_info.get("url")
-                if not img_url:
-                    continue
-                    
-                img_response = requests.get(img_url)
-                img = Image.open(io.BytesIO(img_response.content))
-                img_array = np.array(img).astype(np.float32) / 255.0
-                images.append(img_array)
+            images = []
+            for img_url in image_urls:
+                try:
+                    img_response = requests.get(img_url, timeout=30)
+                    if img_response.status_code == 200:
+                        img = Image.open(io.BytesIO(img_response.content))
+                        # Handle RGBA or other formats
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        img_array = np.array(img).astype(np.float32) / 255.0
+                        images.append(img_array)
+                except Exception as e:
+                    print(f"Failed to download/process image from {img_url}: {str(e)}")
 
             if not images:
-                print("No images found in result")
+                print(f"No images found in result: {result}")
                 return ResultProcessor.create_blank_image()
 
             # Stack the images along a new first dimension
@@ -262,31 +299,144 @@ class ResultProcessor:
     @staticmethod
     def process_single_image_result(result):
         """Process single image result and return tensor."""
+        # Just use the general processor, it returns a 4D tensor (N, H, W, C)
+        # which is what ComfyUI expects for a single image anyway (N=1)
+        return ResultProcessor.process_image_result(result)
+
+    @staticmethod
+    def process_text_result(result):
+        """Process text result and return (output, reasoning)."""
         try:
-            img_info = result.get("image")
-            if not img_info:
-                # try finding in images list
-                if "images" in result and len(result["images"]) > 0:
-                    img_info = result["images"][0]
+            # Handle list of results
+            if isinstance(result, list) and len(result) > 0:
+                result = result[0]
             
-            if not img_info:
-                print("No image found in result")
-                return ResultProcessor.create_blank_image()
+            if not isinstance(result, dict):
+                return (str(result), "")
 
-            img_url = img_info.get("url")
-            img_response = requests.get(img_url)
-            img = Image.open(io.BytesIO(img_response.content))
-            img_array = np.array(img).astype(np.float32) / 255.0
+            output = result.get("output")
+            # DeepGen sometimes uses 'text' or 'response'
+            if not output:
+                output = result.get("text") or result.get("response")
+            
+            # If still nothing, maybe it's in a list of choices (OpenAI style)
+            if not output and "choices" in result:
+                choices = result["choices"]
+                if isinstance(choices, list) and len(choices) > 0:
+                    choice = choices[0]
+                    if isinstance(choice, dict):
+                        message = choice.get("message", {})
+                        if isinstance(message, dict):
+                            output = message.get("content")
+                        if not output:
+                            output = choice.get("text")
+            
+            # Use general searching as fallback
+            if not output:
+                # Look for longest string in dict that isn't a known metadata key
+                candidate = ""
+                for k, v in result.items():
+                    if k not in ["conversation_id", "group_id", "input_message_id", "output_message_id", "agent_alias"]:
+                        if isinstance(v, str) and len(v) > len(candidate):
+                            candidate = v
+                output = candidate
 
-            # Stack the images along a new first dimension
-            stacked_images = np.stack([img_array], axis=0)
-
-            # Convert to PyTorch tensor
-            img_tensor = torch.from_numpy(stacked_images)
-            return (img_tensor,)
+            reasoning = result.get("reasoning", "")
+            
+            return (output or "", reasoning or "")
         except Exception as e:
-            print(f"Error processing single image result: {str(e)}")
-            return ResultProcessor.create_blank_image()
+            print(f"Error processing text result: {str(e)}")
+            return (f"Error: {str(e)}", "")
+
+    @staticmethod
+    def process_file_result(result):
+        """Process result that should contain a file URL (e.g. LoRA)."""
+        try:
+            # Handle list of results
+            if isinstance(result, list) and len(result) > 0:
+                result = result[0]
+            
+            if not isinstance(result, dict):
+                return (str(result),)
+
+            # Look for explicit URL
+            urls = []
+            def search(obj):
+                if isinstance(obj, dict):
+                    url = obj.get("url")
+                    if isinstance(url, str) and url.startswith("http"):
+                        urls.append(url)
+                    for v in obj.values():
+                         if isinstance(v, (dict, list)):
+                             search(v)
+                elif isinstance(obj, list):
+                    for item in obj:
+                        search(item)
+            
+            search(result)
+            if urls:
+                return (urls[0],)
+
+            return (f"Error: No file URL found in result: {result}",)
+        except Exception as e:
+            print(f"Error processing file result: {str(e)}")
+            return (f"Error: {str(e)}",)
+
+    @staticmethod
+    def _extract_video_urls(result):
+        """Helper to extract video URLs from various possible response structures."""
+        urls = []
+        
+        def search(obj):
+            if isinstance(obj, dict):
+                # Check for direct URL in this dict
+                url = obj.get("url")
+                if isinstance(url, str) and url.startswith("http"):
+                    # Validate it's likely a video if mimeType or extension suggests it
+                    mime = obj.get("mimeType", "").lower()
+                    if "video" in mime or not mime:
+                        if any(ext in url.lower() for ext in [".mp4", ".mov", ".webm", ".m4v", ".mkv"]):
+                            urls.append(url)
+                            return # Found a leaf
+
+                # Search common container keys
+                for key in ["videos", "attachments", "results", "video", "output", "data"]:
+                    if key in obj:
+                        search(obj[key])
+                
+                # Recursive search for others
+                for key, value in obj.items():
+                    if key not in ["videos", "attachments", "results", "video", "output", "data"]:
+                        if isinstance(value, (dict, list)):
+                            search(value)
+
+            elif isinstance(obj, list):
+                for item in obj:
+                    search(item)
+            elif isinstance(obj, str):
+                # Direct string URL
+                if obj.startswith("http") and any(ext in obj.lower() for ext in [".mp4", ".mov", ".webm", ".m4v", ".mkv"]):
+                    urls.append(obj)
+
+        search(result)
+        # Deduplicate while preserving order
+        seen = set()
+        return [x for x in urls if not (x in seen or seen.add(x))]
+
+    @staticmethod
+    def process_video_result(result):
+        """Process video generation result and return tuple of URLs."""
+        try:
+            video_urls = ResultProcessor._extract_video_urls(result)
+            if not video_urls:
+                print(f"No videos found in result: {result}")
+                return ("Error: No video found in result",)
+            
+            # Return as tuple of strings (first one if only one expected by most nodes)
+            return (video_urls[0],)
+        except Exception as e:
+            print(f"Error processing video result: {str(e)}")
+            return (f"Error: Processing video result failed: {str(e)}",)
 
     @staticmethod
     def create_blank_image():

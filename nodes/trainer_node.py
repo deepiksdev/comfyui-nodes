@@ -115,8 +115,7 @@ class FluxLoraTrainerNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/flux-lora-fast-training", arguments
             )
-            lora_url = result["diffusers_lora_file"]["url"]
-            return (lora_url,)
+            return ResultProcessor.process_file_result(result)
 
         except Exception as e:
             return DeepGenApiHandler.handle_text_generation_error(
@@ -192,8 +191,7 @@ class HunyuanVideoLoraTrainerNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/hunyuan-video-lora-training", arguments
             )
-            lora_url = result["diffusers_lora_file"]["url"]
-            return (lora_url,)
+            return ResultProcessor.process_file_result(result)
 
         except Exception as e:
             return DeepGenApiHandler.handle_text_generation_error(
@@ -258,8 +256,7 @@ class WanLoraTrainerNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/wan-trainer", arguments
             )
-            lora_url = result["lora_file"]["url"]
-            return (lora_url,)
+            return ResultProcessor.process_file_result(result)
 
         except Exception as e:
             return DeepGenApiHandler.handle_text_generation_error("wan-trainer", str(e))
@@ -373,8 +370,7 @@ class LtxVideoTrainerNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/ltx-video-trainer", arguments
             )
-            lora_url = result["lora_file"]["url"]
-            return (lora_url,)
+            return ResultProcessor.process_file_result(result)
 
         except Exception as e:
             return ApiHandler.handle_text_generation_error("ltx-video-trainer", str(e))

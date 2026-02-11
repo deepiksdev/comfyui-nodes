@@ -63,11 +63,7 @@ class LLMNode:
 
             result = DeepGenApiHandler.submit_and_get_result(alias_id if alias_id else "deepgen/openrouter/router", arguments)
 
-            # Extract output and reasoning
-            output_text = result.get("output", "")
-            reasoning_text = result.get("reasoning", "")
-
-            return (output_text, reasoning_text)
+            return ResultProcessor.process_text_result(result)
         except Exception as e:
             error_result = DeepGenApiHandler.handle_text_generation_error(model, str(e))
             return (error_result[0], "")

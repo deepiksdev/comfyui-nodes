@@ -8,7 +8,7 @@ import numpy as np
 import requests
 import torch
 
-from .deepgen_utils import DeepGenApiHandler, DeepGenConfig, ImageUtils
+from .deepgen_utils import DeepGenApiHandler, DeepGenConfig, ImageUtils, ResultProcessor
 
 # Initialize DeepGenConfig
 deepgen_config = DeepGenConfig()
@@ -46,8 +46,7 @@ class MiniMaxNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/minimax/video-01-live/image-to-video", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "minimax/video-01-live", str(e)
@@ -77,8 +76,7 @@ class MiniMaxTextToVideoNode:
             }
 
             result = DeepGenApiHandler.submit_and_get_result(alias_id if alias_id else "deepgen/minimax-video", arguments)
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error("minimax-video", str(e))
 
@@ -119,8 +117,7 @@ class MiniMaxSubjectReferenceNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/minimax/video-01-subject-reference", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "minimax/video-01-subject-reference", str(e)
@@ -170,8 +167,7 @@ class KlingNode:
                     alias_id if alias_id else "deepgen/kling-video/v1/standard/text-to-video", arguments
                 )
 
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v1/standard", str(e)
@@ -235,8 +231,7 @@ class KlingPro10Node:
                     alias_id if alias_id else "deepgen/kling-video/v1/pro/text-to-video", arguments
                 )
 
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v1/pro", str(e)
@@ -300,8 +295,7 @@ class KlingPro16Node:
                     alias_id if alias_id else "deepgen/kling-video/v1.6/pro/text-to-video", arguments
                 )
 
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v1.6/pro", str(e)
@@ -351,8 +345,7 @@ class KlingMasterNode:
                     alias_id if alias_id else "deepgen/kling-video/v2/master/text-to-video", arguments
                 )
 
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v2/master", str(e)
@@ -763,8 +756,7 @@ class RunwayGen3Node:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/runway-gen3/turbo/image-to-video", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error("runway-gen3", str(e))
 
@@ -836,8 +828,7 @@ class LumaDreamMachineNode:
                 endpoint = alias_id
 
             result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "luma-dream-machine", str(e)
@@ -884,8 +875,7 @@ class Veo2ImageToVideoNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 "deepgen/veo2/image-to-video", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error("veo2", str(e))
 
@@ -1838,8 +1828,7 @@ class DYWanUpscalerNode:
                 arguments,
             )
 
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
 
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error("dy-wan-upscaler", str(e))
@@ -2378,8 +2367,7 @@ class VideoUpscalerNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/video-upscaler", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error("video-upscaler", str(e))
 
@@ -2611,8 +2599,7 @@ class SeedanceImageToVideoNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/bytedance/seedance/v1/lite/image-to-video", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "deepgen/bytedance/seedance/v1/lite/image-to-video", str(e)
@@ -2657,8 +2644,7 @@ class SeedanceTextToVideoNode:
             result = DeepGenApiHandler.submit_and_get_result(
                 alias_id if alias_id else "deepgen/bytedance/seedance/v1/lite/text-to-video", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "deepgen/bytedance/seedance/v1/lite/text-to-video", str(e)
@@ -2773,8 +2759,7 @@ class Veo3Node:
 
         try:
             result = DeepGenApiHandler.submit_and_get_result("deepgen/veo3", arguments)
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error("veo3", str(e))
 
@@ -2828,8 +2813,7 @@ class FalKling21ProImageToVideo:
             result = DeepGenApiHandler.submit_and_get_result(
                 "deepgen/kling-video/v2.1/pro/image-to-video", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v2.1/pro", str(e)
@@ -2949,8 +2933,7 @@ class FalKling26ProVideo:
                 }
 
             result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v2.6/pro", str(e)
@@ -3026,8 +3009,7 @@ class FalWan26Video:
                 arguments["seed"] = seed
 
             result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "wan/v2.6", str(e)
@@ -3093,8 +3075,7 @@ class FalWan26ReferenceToVideo:
                 arguments["seed"] = seed
 
             result = DeepGenApiHandler.submit_and_get_result("wan/v2.6/reference-to-video", arguments)
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "wan/v2.6/reference-to-video", str(e)
@@ -3141,8 +3122,7 @@ class FalSora2ProImageToVideo:
             result = DeepGenApiHandler.submit_and_get_result(
                 "deepgen/sora-2/image-to-video/pro", arguments
             )
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "sora-2/pro", str(e)
@@ -3209,8 +3189,7 @@ class FalVeo31FirstLastFrameToVideo:
                 }
 
             result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "veo3.1", str(e)
@@ -3277,8 +3256,7 @@ class FalVeo31FastFirstLastFrameToVideo:
                 }
 
             result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
-            video_url = result["video"]["url"]
-            return (video_url,)
+            return ResultProcessor.process_video_result(result)
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(
                 "veo3.1/fast", str(e)
