@@ -18,7 +18,7 @@ class VLMNode:
                 "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
                 "reasoning": ("BOOLEAN", {"default": False}),
                 "max_tokens": ("INT", {"default": 1024, "min": 0, "max": 100000}),
-                "attachments_urls": ("LIST",),
+                "attachments_urls": ("STRING", {"default": "", "multiline": True}),
             },
         }
 
