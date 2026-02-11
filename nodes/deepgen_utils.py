@@ -301,12 +301,81 @@ class DeepGenApiHandler:
     """Utility functions for API interactions."""
 
     @staticmethod
+    def _map_arguments(arguments):
+        """Map arguments to the expected DeepGen API format."""
+        mapped = arguments.copy()
+
+        # Mapping rules
+        field_mapping = {
+            "prompt": "question",
+            "system_prompt": "forced_system_prompt",
+            "num_inference_steps": "steps",
+            # number_of_steps is also used in trainers
+            "number_of_steps": "steps",
+            "guidance_scale": "cfg_scale",
+            "num_images": "n",
+        }
+
+        for old_key, new_key in field_mapping.items():
+            if old_key in mapped:
+                val = mapped.pop(old_key)
+                # Don't overwrite if new_key already exists unless val is more significant
+                if new_key not in mapped or val:
+                    mapped[new_key] = val
+
+        # Handle image_size
+        if "image_size" in mapped:
+            size = mapped.pop("image_size")
+            if isinstance(size, dict):
+                if "width" in size: mapped["width"] = size.get("width")
+                if "height" in size: mapped["height"] = size.get("height")
+            elif isinstance(size, str):
+                mapped["aspect_ratio"] = size
+
+        # Handle URLs -> attachments_urls
+        attachments_urls = mapped.get("attachments_urls", [])
+        if not isinstance(attachments_urls, list):
+            attachments_urls = [attachments_urls]
+
+        url_fields = [
+            "image_url", "video_url", "images_zip_url",
+            "images_data_url", "training_data_url"
+        ]
+        for url_key in url_fields:
+             if url_key in mapped:
+                 val = mapped.pop(url_key)
+                 if isinstance(val, str) and val:
+                     attachments_urls.append(val)
+                 elif isinstance(val, list):
+                     attachments_urls.extend([v for v in val if v])
+
+        if "image_urls" in mapped:
+            val = mapped.pop("image_urls")
+            if isinstance(val, list):
+                attachments_urls.extend([v for v in val if v])
+            elif isinstance(val, str) and val:
+                attachments_urls.append(val)
+
+        if attachments_urls:
+            # Filter out empty strings and ensure uniqueness
+            mapped["attachments_urls"] = list(dict.fromkeys([u for u in attachments_urls if u]))
+
+        # Add default type if not present
+        if "type" not in mapped:
+            mapped["type"] = "Chat"
+
+        return mapped
+
+    @staticmethod
     def submit_and_get_result(endpoint, arguments):
         """Submit job to DeepGen API and get result."""
         try:
             config = DeepGenConfig()
             key = config.get_key()
             base_url = config.get_base_url()
+            
+            # Map arguments to DeepGen Gateway format
+            mapped_arguments = DeepGenApiHandler._map_arguments(arguments)
             
             # Construct URL: base_url + / + endpoint (alias_id) + /api
             url = f"{base_url}/{endpoint}/api"
@@ -317,7 +386,8 @@ class DeepGenApiHandler:
             }
             
             print(f"Submitting to {url}")
-            response = requests.post(url, json=arguments, headers=headers)
+            print(f"Mapped Arguments: {mapped_arguments}")
+            response = requests.post(url, json=mapped_arguments, headers=headers)
             
             if response.status_code == 200:
                 result = response.json()
