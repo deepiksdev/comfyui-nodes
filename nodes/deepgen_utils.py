@@ -145,12 +145,37 @@ class ImageUtils:
             return None
         finally:
             # Clean up the temporary file
-            if "temp_file_path" in locals():
+            if temp_file_path and os.path.exists(temp_file_path):
                 try:
                     os.unlink(temp_file_path)
                 except:
                     pass
                 
+    @staticmethod
+    def get_attachment_file(image, filename="image.png"):
+        """Convert image tensor to AttachmentFile dict with base64 encoded bytes."""
+        import base64
+        import io
+        try:
+            pil_image = ImageUtils.tensor_to_pil(image)
+            if not pil_image:
+                return None
+            
+            buffer = io.BytesIO()
+            pil_image.save(buffer, format="PNG")
+            image_bytes = buffer.getvalue()
+            # Send as base64 string for JSON compatibility; server-side Pydantic bytes field will decode it
+            base64_str = base64.b64encode(image_bytes).decode('utf-8')
+            
+            return {
+                "attachment_bytes": base64_str,
+                "attachment_mime_type": "image/png",
+                "attachment_file_name": filename
+            }
+        except Exception as e:
+            print(f"Error creating attachment file: {str(e)}")
+            return None
+
     @staticmethod
     def upload_file(file_path):
         """Upload a file to DeepGen and return URL."""

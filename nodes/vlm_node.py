@@ -29,34 +29,36 @@ class VLMNode:
     def generate_text(self, prompt, alias_id, image=None, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None):
         try:
             image_urls = []
+            attachments_files = []
             
-            # Handle list of attachments if provided
+            # Handle list of attachments if provided via URL
             if attachments_urls:
                 if isinstance(attachments_urls, list):
                     image_urls.extend([u for u in attachments_urls if isinstance(u, str) and u.strip()])
                 elif isinstance(attachments_urls, str):
                     image_urls.extend([u.strip() for u in attachments_urls.split("\n") if u.strip()])
 
-            # Handle image tensor if provided
+            # Handle image tensor if provided - using direct attachments
             if image is not None:
                 # Check if image is a batch (4D tensor) or single image (3D tensor)
                 if len(image.shape) == 4:
                     # Batch of images
                     for i in range(image.shape[0]):
                         single_image = image[i:i+1]
-                        image_url = ImageUtils.upload_image(single_image)
-                        if image_url:
-                            image_urls.append(image_url)
+                        attach = ImageUtils.get_attachment_file(single_image, filename=f"image_{i}.png")
+                        if attach:
+                            attachments_files.append(attach)
                 else:
                     # Single image
-                    image_url = ImageUtils.upload_image(image)
-                    if image_url:
-                        image_urls.append(image_url)
+                    attach = ImageUtils.get_attachment_file(image, filename="image.png")
+                    if attach:
+                        attachments_files.append(attach)
 
             arguments = {
                 "prompt": prompt,
                 "system_prompt": system_prompt,
                 "attachments_urls": image_urls,
+                "attachments_files": attachments_files,
                 "temperature": temperature,
                 "reasoning": reasoning,
                 "stream": False,
