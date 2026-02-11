@@ -1,4 +1,5 @@
-from .fal_utils import ApiHandler, ImageUtils, ResultProcessor
+from .deepgen_utils import DeepGenApiHandler as ApiHandler, ImageUtils, ResultProcessor
+
 
 
 # Remove all the configuration code since it's now handled by FalConfig
@@ -45,12 +46,13 @@ class Sana:
                 "seed": ("INT", {"default": -1}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "output_format": (["png", "jpeg"], {"default": "png"}),
+                "alias_id": ("STRING", {"default": "deepgen/sana"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -65,27 +67,35 @@ class Sana:
         seed=-1,
         enable_safety_checker=True,
         output_format="png",
+        alias_id="deepgen/sana",
     ):
+        model_name = "Sana"
+
         arguments = {
             "prompt": prompt,
-            "negative_prompt": negative_prompt,
             "num_inference_steps": num_inference_steps,
             "guidance_scale": guidance_scale,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker,
             "output_format": output_format,
         }
+        
+        # Use alias_id if provided, otherwise use default
+        endpoint = alias_id if alias_id else "deepgen/sana"
 
         if image_size == "custom":
             arguments["image_size"] = {"width": width, "height": height}
         else:
             arguments["image_size"] = image_size
 
+        if negative_prompt:
+            arguments["negative_prompt"] = negative_prompt
+            
         if seed != -1:
             arguments["seed"] = seed
 
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/sana", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("Sana", e)
@@ -151,7 +161,7 @@ class Recraft:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(self, prompt, image_size, width, height, style, style_id=""):
         arguments = {
@@ -168,7 +178,7 @@ class Recraft:
             arguments["style_id"] = style_id
 
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/recraft-v3", arguments)
+            result = ApiHandler.submit_and_get_result("deepgen/recraft-v3", arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("Recraft", e)
@@ -212,7 +222,7 @@ class HidreamFull:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -242,7 +252,7 @@ class HidreamFull:
 
         try:
             result = ApiHandler.submit_and_get_result(
-                "fal-ai/hidream-i1-full", arguments
+                "deepgen/hidream-i1-full", arguments
             )
             return ResultProcessor.process_image_result(result)
         except Exception as e:
@@ -282,12 +292,13 @@ class Ideogramv3:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
+                "alias_id": ("STRING", {"default": "deepgen/ideogram/v3"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -300,7 +311,9 @@ class Ideogramv3:
         num_images,
         safety_tolerance,
         seed=-1,
+        alias_id="deepgen/ideogram/v3",
     ):
+        model_name = "Ideogramv3"
         arguments = {
             "prompt": prompt,
             "num_inference_steps": num_inference_steps,
@@ -315,11 +328,13 @@ class Ideogramv3:
         if seed != -1:
             arguments["seed"] = seed
 
+        endpoint = alias_id if alias_id else "deepgen/ideogram/v3"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/ideogram/v3", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("Ideogramv3", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class FluxPro:
@@ -355,12 +370,13 @@ class FluxPro:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
+                "alias_id": ("STRING", {"default": "deepgen/flux-pro"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -373,7 +389,9 @@ class FluxPro:
         num_images,
         safety_tolerance,
         seed=-1,
+        alias_id="deepgen/flux-pro",
     ):
+        model_name = "FluxPro"
         arguments = {
             "prompt": prompt,
             "num_inference_steps": num_inference_steps,
@@ -388,11 +406,13 @@ class FluxPro:
         if seed != -1:
             arguments["seed"] = seed
 
+        endpoint = alias_id if alias_id else "deepgen/flux-pro"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/flux-pro", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("FluxPro", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class FluxDev:
@@ -425,6 +445,7 @@ class FluxDev:
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
+                "alias_id": ("STRING", {"default": "deepgen/flux/dev"}),
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
@@ -433,7 +454,7 @@ class FluxDev:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -446,6 +467,7 @@ class FluxDev:
         num_images,
         enable_safety_checker,
         seed=-1,
+        alias_id="deepgen/flux/dev",
     ):
         arguments = {
             "prompt": prompt,
@@ -461,8 +483,11 @@ class FluxDev:
         if seed != -1:
             arguments["seed"] = seed
 
+        # Use alias_id if provided, otherwise use default
+        endpoint = alias_id if alias_id else "deepgen/flux/dev"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/flux/dev", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("FluxDev", e)
@@ -500,12 +525,13 @@ class FluxSchnell:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
+                "alias_id": ("STRING", {"default": "deepgen/flux/schnell"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -517,7 +543,9 @@ class FluxSchnell:
         num_images,
         enable_safety_checker,
         seed=-1,
+        alias_id="deepgen/flux/schnell",
     ):
+        model_name = "FluxSchnell"
         arguments = {
             "prompt": prompt,
             "num_inference_steps": num_inference_steps,
@@ -531,11 +559,14 @@ class FluxSchnell:
         if seed != -1:
             arguments["seed"] = seed
 
+        # Use alias_id if provided, otherwise use default
+        endpoint = alias_id if alias_id else "deepgen/flux/schnell"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/flux/schnell", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("FluxSchnell", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class FluxPro11:
@@ -570,12 +601,13 @@ class FluxPro11:
             "optional": {
                 "seed": ("INT", {"default": -1}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
+                "alias_id": ("STRING", {"default": "deepgen/flux-pro/v1.1"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -586,8 +618,12 @@ class FluxPro11:
         num_images,
         safety_tolerance,
         seed=-1,
+
         sync_mode=False,
+        alias_id="deepgen/flux-pro/v1.1",
     ):
+        model_name = "Flux Pro 1.1"
+
         arguments = {
             "prompt": prompt,
             "num_images": num_images,
@@ -601,11 +637,13 @@ class FluxPro11:
         if seed != -1:
             arguments["seed"] = seed
 
+        endpoint = alias_id if alias_id else "deepgen/flux-pro/v1.1"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/flux-pro/v1.1", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("FluxPro 1.1", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class FluxPro1Fill:
@@ -616,9 +654,9 @@ class FluxPro1Fill:
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
                 "safety_tolerance": (["1", "2", "3", "4", "5", "6"], {"default": "2"}),
-                "output_format": (["png", "jpeg"], {"default": "png"}),
-                
-            },
+                "output_format": (["png", "jpeg"], {"default": "jpeg"}),
+                "alias_id": ("STRING", {"default": "deepgen/flux/pro"}),
+            },    
             "optional": {
                 "image": ("IMAGE", {"default": None}),
                 "mask_image": ("IMAGE", {"default": None}),
@@ -630,7 +668,7 @@ class FluxPro1Fill:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -643,20 +681,16 @@ class FluxPro1Fill:
         seed=0,
         sync_mode=False,
         enhance_prompt=True,
+        alias_id="deepgen/flux-pro/v1/fill",
     ):
+        model_name = "FluxPro 1/FILL"
         if image is None or mask_image is None:
             return ApiHandler.handle_image_generation_error(
-                "FluxPro 1/FILL", "Both image and mask_image inputs are required."
+                model_name, "Both image and mask_image inputs are required."
             )
         image_url = ImageUtils.upload_image(image)
         mask_url = ImageUtils.upload_image(mask_image)
         arguments = {
-            "prompt": prompt,
-            "num_images": num_images,
-            "safety_tolerance": safety_tolerance,
-            "sync_mode": sync_mode,
-        }
-        arguments={
             "prompt": prompt,
             "num_images": num_images,
             "sync_mode": sync_mode,
@@ -669,11 +703,13 @@ class FluxPro1Fill:
         if seed != 0:
             arguments["seed"] = seed
 
+        endpoint = alias_id if alias_id else "deepgen/flux-pro/v1/fill"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/flux-pro/v1/fill", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("FluxPro 1/FILL", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class FluxUltra:
@@ -694,12 +730,13 @@ class FluxUltra:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
+                "alias_id": ("STRING", {"default": "deepgen/flux-pro/v1.1-ultra"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -711,7 +748,9 @@ class FluxUltra:
         raw,
         sync_mode,
         seed=-1,
+        alias_id="deepgen/flux-pro/v1.1-ultra",
     ):
+        model_name = "FluxUltra"
         arguments = {
             "prompt": prompt,
             "aspect_ratio": aspect_ratio,
@@ -724,13 +763,13 @@ class FluxUltra:
         if seed != -1:
             arguments["seed"] = seed
 
+        endpoint = alias_id if alias_id else "deepgen/flux-pro/v1.1-ultra"
+
         try:
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/flux-pro/v1.1-ultra", arguments
-            )
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("FluxUltra", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class FluxLora:
@@ -779,12 +818,13 @@ class FluxLora:
                     "FLOAT",
                     {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
                 ),
+                "alias_id": ("STRING", {"default": "deepgen/flux-lora"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -801,7 +841,9 @@ class FluxLora:
         lora_scale_1=1.0,
         lora_path_2="",
         lora_scale_2=1.0,
+        alias_id="deepgen/flux-lora",
     ):
+        model_name = "FluxLora"
         arguments = {
             "prompt": prompt,
             "num_inference_steps": num_inference_steps,
@@ -825,11 +867,13 @@ class FluxLora:
         if loras:
             arguments["loras"] = loras
 
+        endpoint = alias_id if alias_id else "deepgen/flux-lora"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/flux-lora", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("FluxLora", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class FluxGeneral:
@@ -926,12 +970,13 @@ class FluxGeneral:
                     "FLOAT",
                     {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
                 ),
+                "alias_id": ("STRING", {"default": "deepgen/flux-general"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -961,7 +1006,9 @@ class FluxGeneral:
         control_mask=None,
         ip_adapter_image=None,
         ip_adapter_mask=None,
+        alias_id="deepgen/flux-general",
     ):
+        model_name = "FluxGeneral"
         arguments = {
             "prompt": prompt,
             "num_inference_steps": num_inference_steps,
@@ -1097,11 +1144,13 @@ class FluxGeneral:
         if loras:
             arguments["loras"] = loras
 
+        endpoint = alias_id if alias_id else "deepgen/flux-general"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/flux-general", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("FluxGeneral", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class FluxProKontext:
@@ -1138,12 +1187,13 @@ class FluxProKontext:
                 "output_format": (["jpeg", "png"], {"default": "jpeg"}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -1157,18 +1207,20 @@ class FluxProKontext:
         output_format="jpeg",
         sync_mode=False,
         seed=0,
+        alias_id="",
     ):
         # Upload the input image to get URL
+        model_name = "Flux Pro Kontext Max" if max_quality else "Flux Pro Kontext"
         image_url = ImageUtils.upload_image(image)
         if not image_url:
-            model_name = "Flux Pro Kontext Max" if max_quality else "Flux Pro Kontext"
             print(f"Error: Failed to upload image for {model_name}")
             return ResultProcessor.create_blank_image()
 
         # Dynamic endpoint selection based on max_quality toggle
-        endpoint = (
-            "fal-ai/flux-pro/kontext/max" if max_quality else "fal-ai/flux-pro/kontext"
+        default_endpoint = (
+            "deepgen/flux-pro/kontext/max" if max_quality else "deepgen/flux-pro/kontext"
         )
+        endpoint = alias_id if alias_id else default_endpoint
 
         arguments = {
             "prompt": prompt,
@@ -1188,7 +1240,6 @@ class FluxProKontext:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            model_name = "Flux Pro Kontext Max" if max_quality else "Flux Pro Kontext"
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
@@ -1229,12 +1280,13 @@ class FluxProKontextMulti:
                 "output_format": (["jpeg", "png"], {"default": "jpeg"}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -1251,8 +1303,12 @@ class FluxProKontextMulti:
         output_format="jpeg",
         sync_mode=False,
         seed=0,
+        alias_id="",
     ):
         # Upload all provided images
+        model_name = (
+            "Flux Pro Kontext Max Multi" if max_quality else "Flux Pro Kontext Multi"
+        )
         image_urls = []
 
         for i, img in enumerate([image_1, image_2, image_3, image_4], 1):
@@ -1261,29 +1317,20 @@ class FluxProKontextMulti:
                 if url:
                     image_urls.append(url)
                 else:
-                    model_name = (
-                        "Flux Pro Kontext Max Multi"
-                        if max_quality
-                        else "Flux Pro Kontext Multi"
-                    )
                     print(f"Error: Failed to upload image {i} for {model_name}")
                     return ResultProcessor.create_blank_image()
 
         if len(image_urls) < 2:
-            model_name = (
-                "Flux Pro Kontext Max Multi"
-                if max_quality
-                else "Flux Pro Kontext Multi"
-            )
             print(f"Error: At least 2 images required for {model_name}")
             return ResultProcessor.create_blank_image()
 
         # Dynamic endpoint selection based on max_quality toggle
-        endpoint = (
-            "fal-ai/flux-pro/kontext/max/multi"
+        default_endpoint = (
+            "deepgen/flux-pro/kontext/max/multi"
             if max_quality
-            else "fal-ai/flux-pro/kontext/multi"
+            else "deepgen/flux-pro/kontext/multi"
         )
+        endpoint = alias_id if alias_id else default_endpoint
 
         arguments = {
             "prompt": prompt,
@@ -1303,11 +1350,6 @@ class FluxProKontextMulti:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            model_name = (
-                "Flux Pro Kontext Max Multi"
-                if max_quality
-                else "Flux Pro Kontext Multi"
-            )
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
@@ -1333,12 +1375,13 @@ class FluxProKontextTextToImage:
                 "output_format": (["jpeg", "png"], {"default": "jpeg"}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2**32 - 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -1351,13 +1394,20 @@ class FluxProKontextTextToImage:
         output_format="jpeg",
         sync_mode=False,
         seed=0,
+        alias_id="",
     ):
         # Dynamic endpoint selection based on max_quality toggle
-        endpoint = (
-            "fal-ai/flux-pro/kontext/max/text-to-image"
+        model_name = (
+            "Flux Pro Kontext Max Text-to-Image"
             if max_quality
-            else "fal-ai/flux-pro/kontext/text-to-image"
+            else "Flux Pro Kontext Text-to-Image"
         )
+        default_endpoint = (
+            "deepgen/flux-pro/kontext/max/text-to-image"
+            if max_quality
+            else "deepgen/flux-pro/kontext/text-to-image"
+        )
+        endpoint = alias_id if alias_id else default_endpoint
 
         arguments = {
             "prompt": prompt,
@@ -1376,11 +1426,6 @@ class FluxProKontextTextToImage:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            model_name = (
-                "Flux Pro Kontext Max Text-to-Image"
-                if max_quality
-                else "Flux Pro Kontext Text-to-Image"
-            )
             return ApiHandler.handle_image_generation_error(model_name, e)
 
 
@@ -1391,27 +1436,32 @@ class Imagen4PreviewNode:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
             },
+            "optional": {
+                "alias_id": ("STRING", {"default": "deepgen/imagen4/preview"}),
+            },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
         prompt,
+        alias_id="deepgen/imagen4/preview",
     ):
+        model_name = "Imagen4 Preview"
         arguments = {
             "prompt": prompt,
         }
 
+        endpoint = alias_id if alias_id else "deepgen/imagen4/preview"
+
         try:
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/imagen4/preview", arguments
-            )
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("Imagen4 Preview", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class QwenImageEdit:
@@ -1455,12 +1505,13 @@ class QwenImageEdit:
             "optional": {
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
                 "seed": ("INT", {"default": -1}),
+                "alias_id": ("STRING", {"default": "deepgen/qwen-image-edit"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "edit_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def edit_image(
         self,
@@ -1478,6 +1529,7 @@ class QwenImageEdit:
         sync_mode,
         negative_prompt="",
         seed=-1,
+        alias_id="deepgen/qwen-image-edit",
     ):
         model_name = "Qwen Image Edit"
         image_url = ImageUtils.upload_image(image)
@@ -1508,8 +1560,10 @@ class QwenImageEdit:
         if seed != -1:
             arguments["seed"] = seed
 
+        endpoint = alias_id if alias_id else "deepgen/qwen-image-edit"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/qwen-image-edit", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error(model_name, e)
@@ -1565,12 +1619,13 @@ class QwenImageEditPlusLoRA:
                     "FLOAT",
                     {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.05},
                 ),
+                "alias_id": ("STRING", {"default": "deepgen/qwen-image-edit-plus-lora"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "edit_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def edit_image(
         self,
@@ -1594,6 +1649,7 @@ class QwenImageEditPlusLoRA:
         lora_scale_3=1.0,
         lora_path_4="",
         lora_scale_4=1.0,
+        alias_id="deepgen/qwen-image-edit-plus-lora",
     ):
         model_name = "Qwen Image Edit Plus LoRA"
 
@@ -1612,6 +1668,8 @@ class QwenImageEditPlusLoRA:
             "enable_safety_checker": enable_safety_checker,
             "output_format": output_format,
         }
+        
+        endpoint = alias_id if alias_id else "deepgen/qwen-image-edit-plus-lora"
 
         if image_size == "custom":
             arguments["image_size"] = {"width": custom_width, "height": custom_height}
@@ -1620,7 +1678,7 @@ class QwenImageEditPlusLoRA:
 
         if negative_prompt:
             arguments["negative_prompt"] = negative_prompt
-
+            
         if seed != -1:
             arguments["seed"] = seed
 
@@ -1639,7 +1697,7 @@ class QwenImageEditPlusLoRA:
 
         try:
             result = ApiHandler.submit_and_get_result(
-                "fal-ai/qwen-image-edit-plus-lora", arguments
+                endpoint, arguments
             )
             return ResultProcessor.process_image_result(result)
         except Exception as e:
@@ -1661,12 +1719,13 @@ class SeedEditV3:
                     {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1},
                 ),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+                "alias_id": ("STRING", {"default": "deepgen/bytedance/seededit/v3/edit-image"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -1674,6 +1733,7 @@ class SeedEditV3:
         image,
         guidance_scale=0.5,
         seed=-1,
+        alias_id="deepgen/bytedance/seededit/v3/edit-image",
     ):
         model_name = "SeedEdit 3.0"
         image_url = ImageUtils.upload_image(image)
@@ -1681,7 +1741,8 @@ class SeedEditV3:
             print(f"Error: Failed to upload image for {model_name}")
             return ResultProcessor.create_blank_image()
 
-        endpoint = "fal-ai/bytedance/seededit/v3/edit-image"
+        default_endpoint = "deepgen/bytedance/seededit/v3/edit-image"
+        endpoint = alias_id if alias_id else default_endpoint
         arguments = {
             "prompt": prompt,
             "image_url": image_url,
@@ -1735,12 +1796,13 @@ class SeedreamV4Edit:
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
+                "alias_id": ("STRING", {"default": "deepgen/bytedance/seedream/v4/edit"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -1763,6 +1825,7 @@ class SeedreamV4Edit:
         enable_safety_checker=True,
         seed=-1,
         sync_mode=False,
+        alias_id="deepgen/bytedance/seedream/v4/edit",
     ):
         model_name = "Seedream 4.0 Edit"
 
@@ -1800,7 +1863,8 @@ class SeedreamV4Edit:
             )
             return ResultProcessor.create_blank_image()
 
-        endpoint = "fal-ai/bytedance/seedream/v4/edit"
+        default_endpoint = "deepgen/bytedance/seedream/v4/edit"
+        endpoint = alias_id if alias_id else default_endpoint
         arguments = {
             "prompt": prompt,
             "image_urls": image_urls,
@@ -1839,12 +1903,13 @@ class NanoBananaTextToImage:
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "output_format": (["jpeg", "png"], {"default": "png"}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
+                "alias_id": ("STRING", {"default": "deepgen/nano-banana"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -1853,7 +1918,9 @@ class NanoBananaTextToImage:
         num_images=1,
         output_format="png",
         sync_mode=False,
+        alias_id="deepgen/nano-banana",
     ):
+        model_name = "Nano Banana Text-to-Image"
         arguments = {
             "prompt": prompt,
             "aspect_ratio": aspect_ratio,
@@ -1862,11 +1929,13 @@ class NanoBananaTextToImage:
             "sync_mode": sync_mode,
         }
 
+        endpoint = alias_id if alias_id else "deepgen/nano-banana"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/nano-banana", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("Nano Banana Text-to-Image", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class NanoBananaEdit:
@@ -1884,12 +1953,13 @@ class NanoBananaEdit:
                 "images": ("IMAGE", {"default": None, "multiple": True}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "output_format": (["jpeg", "png"], {"default": "jpeg"}),
+                "alias_id": ("STRING", {"default": "deepgen/nano-banana/edit"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -1901,7 +1971,9 @@ class NanoBananaEdit:
         images=None,
         num_images=1,
         output_format="jpeg",
+        alias_id="deepgen/nano-banana/edit",
     ):
+        model_name = "Nano Banana Edit"
         # Upload all provided images
         singleImages = ImageUtils.prepare_images([image_1, image_2, image_3, image_4])
         batchImages = ImageUtils.prepare_images(images)
@@ -1915,11 +1987,13 @@ class NanoBananaEdit:
             "output_format": output_format,
         }
 
+        endpoint = alias_id if alias_id else "deepgen/nano-banana/edit"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/nano-banana/edit", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("Nano Banana Edit", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class NanoBananaPro:
@@ -1939,12 +2013,13 @@ class NanoBananaPro:
                 "output_format": (["jpeg", "png", "webp"], {"default": "png"}),
                 "resolution": (["1K", "2K", "4K"], {"default": "1K"}),
                 "sync_mode": ("BOOLEAN", {"default": False}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -1955,7 +2030,9 @@ class NanoBananaPro:
         output_format="png",
         resolution="1K",
         sync_mode=False,
+        alias_id="",
     ):
+        model_name = "Nano Banana Pro"
         # Prepare image URLs from optional input, limit to 14 images max
         if images is not None and hasattr(images, 'shape') and len(images.shape) == 4 and images.shape[0] > 14:
             # If batch has more than 14 images, take only first 14
@@ -1975,20 +2052,22 @@ class NanoBananaPro:
         # Conditional endpoint routing based on whether ANY images provided
         if len(image_urls) > 0:
             # Use edit endpoint with image_urls array
-            endpoint = "fal-ai/nano-banana-pro/edit"
+            default_endpoint = "deepgen/nano-banana-pro/edit"
             arguments["image_urls"] = image_urls
         else:
             # Use text-to-image endpoint (no image_urls parameter)
-            endpoint = "fal-ai/nano-banana-pro"
+            default_endpoint = "deepgen/nano-banana-pro"
             # Remove "auto" from aspect_ratio for text-to-image endpoint
             if aspect_ratio == "auto":
                 arguments["aspect_ratio"] = "1:1"
+
+        endpoint = alias_id if alias_id else default_endpoint
 
         try:
             result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("Nano Banana Pro", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class ReveTextToImage:
@@ -2005,12 +2084,13 @@ class ReveTextToImage:
                 ),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "output_format": (["jpeg", "png"], {"default": "png"}),
+                "alias_id": ("STRING", {"default": "deepgen/reve/text-to-image"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -2018,7 +2098,9 @@ class ReveTextToImage:
         aspect_ratio="1:1",
         num_images=1,
         output_format="png",
+        alias_id="deepgen/reve/text-to-image",
     ):
+        model_name = "Reve Text-to-Image"
         arguments = {
             "prompt": prompt,
             "aspect_ratio": aspect_ratio,
@@ -2026,11 +2108,13 @@ class ReveTextToImage:
             "output_format": output_format,
         }
 
+        endpoint = alias_id if alias_id else "deepgen/reve/text-to-image"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/reve/text-to-image", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("Reve Text-to-Image", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class Dreamina31TextToImage:
@@ -2058,12 +2142,13 @@ class Dreamina31TextToImage:
                 "output_format": (["jpeg", "png"], {"default": "png"}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 2**32 - 1}),
                 "enhance_prompt": ("BOOLEAN", {"default": False}),
+                "alias_id": ("STRING", {"default": "deepgen/bytedance/dreamina/v3.1/text-to-image"}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -2074,7 +2159,9 @@ class Dreamina31TextToImage:
         output_format="png",
         seed=-1,
         enhance_prompt=False,
+        alias_id="deepgen/bytedance/dreamina/v3.1/text-to-image",
     ):
+        model_name = "Dreamina v3.1 Text-to-Image"
         arguments = {
             "prompt": prompt,
             "image_size": image_size,
@@ -2087,11 +2174,13 @@ class Dreamina31TextToImage:
         if seed > 0:
             arguments["seed"] = seed
 
+        endpoint = alias_id if alias_id else "deepgen/bytedance/dreamina/v3.1/text-to-image"
+
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/bytedance/dreamina/v3.1/text-to-image", arguments)
+            result = ApiHandler.submit_and_get_result(endpoint, arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("Dreamina v3.1 Text-to-Image", e)
+            return ApiHandler.handle_image_generation_error(model_name, e)
 
 
 class GPTImage15Edit:
@@ -2116,7 +2205,7 @@ class GPTImage15Edit:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "edit_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def edit_image(
         self,
@@ -2162,7 +2251,7 @@ class GPTImage15Edit:
                 arguments["mask_image_url"] = mask_url
 
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/gpt-image-1.5/edit", arguments)
+            result = ApiHandler.submit_and_get_result("deepgen/gpt-image-1.5/edit", arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error(model_name, e)
@@ -2187,7 +2276,7 @@ class GPTImage15:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Image"
 
     def generate_image(
         self,
@@ -2210,7 +2299,7 @@ class GPTImage15:
         }
 
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/gpt-image-1.5", arguments)
+            result = ApiHandler.submit_and_get_result("deepgen/gpt-image-1.5", arguments)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("GPT-Image 1.5", e)
@@ -2254,7 +2343,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Hidreamfull_deepgen": "HidreamFull (deepgen)",
     "FluxPro_deepgen": "Flux Pro (deepgen)",
     "FluxDev_deepgen": "Flux Dev (deepgen)",
-    "FluxSchnell_deepgen": "Flux Schnell (deepgennnn)",
+    "FluxSchnell_deepgen": "Flux Schnell (deepgen)",
     "FluxPro11_deepgen": "Flux Pro 1.1 (deepgen)",
     "FluxPro1Fill_deepgen": "Flux Pro 1 Fill (deepgen)",
     "FluxUltra_deepgen": "Flux Ultra (deepgen)",

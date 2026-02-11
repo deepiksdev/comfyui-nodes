@@ -4,25 +4,24 @@ import os
 import tempfile
 import asyncio
 import concurrent.futures
+import time
 
 import numpy as np
 import requests
 import torch
-from fal_client.client import SyncClient
-from fal_client import AsyncClient
 from PIL import Image
 
 
-class FalConfig:
-    """Singleton class to handle FAL configuration and client setup."""
+class DeepGenConfig:
+    """Singleton class to handle DeepGen configuration and client setup."""
 
     _instance = None
-    _client = None
     _key = None
+    _base_url = "https://api.deepgen.app"
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(FalConfig, cls).__new__(cls)
+            cls._instance = super(DeepGenConfig, cls).__new__(cls)
             cls._instance._initialize()
         return cls._instance
 
@@ -40,45 +39,50 @@ class FalConfig:
         if os.path.exists(env_path):
             with open(env_path, "r") as f:
                 for line in f:
-                    if line.startswith("FAL_KEY="):
+                    if line.startswith("DEEPGEN_API_KEY="):
                         self._key = line.strip().split("=", 1)[1]
                         # Remove quotes if present
                         if (self._key.startswith('"') and self._key.endswith('"')) or \
                            (self._key.startswith("'") and self._key.endswith("'")):
                             self._key = self._key[1:-1]
-                        os.environ["FAL_KEY"] = self._key
-                        print(f"FAL_KEY loaded from {env_path}")
+                        os.environ["DEEPGEN_API_KEY"] = self._key
+                        print(f"DEEPGEN_API_KEY loaded from {env_path}")
                         break
 
         try:
-            if not self._key and os.environ.get("FAL_KEY") is not None:
-                print("FAL_KEY found in environment variables")
-                self._key = os.environ["FAL_KEY"]
+            if not self._key and os.environ.get("DEEPGEN_API_KEY") is not None:
+                print("DEEPGEN_API_KEY found in environment variables")
+                self._key = os.environ["DEEPGEN_API_KEY"]
             
             if not self._key:
-                self._key = config["API"]["FAL_KEY"]
-                if self._key != "<your_deepgen_api_key_here>":
-                    print("FAL_KEY found in config.ini")
-                    os.environ["FAL_KEY"] = self._key
-                else:
-                    self._key = None
+                # Fallback to checking config.ini just in case, though structure might differ
+                if "API" in config and "DEEPGEN_API_KEY" in config["API"]:
+                    self._key = config["API"]["DEEPGEN_API_KEY"]
+                    if self._key != "<your_deepgen_api_key_here>":
+                        print("DEEPGEN_API_KEY found in config.ini")
+                        os.environ["DEEPGEN_API_KEY"] = self._key
+                    else:
+                        self._key = None
 
             if not self._key:
-                print("Error: FAL_KEY not found in .env, config.ini or environment variables")
+                print("Error: DEEPGEN_API_KEY not found in .env, config.ini or environment variables")
             elif self._key == "<your_deepgen_api_key_here>":
-                print("WARNING: You are using the default FAL API key placeholder!")
+                print("WARNING: You are using the default DeepGen API key placeholder!")
+                
+            # Allow overriding base URL from env
+            if os.environ.get("DEEPGEN_API_URL"):
+                self._base_url = os.environ["DEEPGEN_API_URL"]
+                
         except Exception as e:
-            print(f"Error initializing FalConfig: {str(e)}")
-
-    def get_client(self):
-        """Get or create the FAL client."""
-        if self._client is None:
-            self._client = SyncClient(key=self._key)
-        return self._client
+            print(f"Error initializing DeepGenConfig: {str(e)}")
 
     def get_key(self):
-        """Get the FAL API key."""
+        """Get the DeepGen API key."""
         return self._key
+        
+    def get_base_url(self):
+        """Get the DeepGen API base URL."""
+        return self._base_url
 
 
 class ImageUtils:
@@ -116,7 +120,7 @@ class ImageUtils:
 
     @staticmethod
     def upload_image(image):
-        """Upload image tensor to FAL and return URL."""
+        """Upload image tensor to DeepGen and return URL."""
         try:
             pil_image = ImageUtils.tensor_to_pil(image)
             if not pil_image:
@@ -127,25 +131,45 @@ class ImageUtils:
                 pil_image.save(temp_file, format="PNG")
                 temp_file_path = temp_file.name
 
-            # Upload the temporary file
-            client = FalConfig().get_client()
-            image_url = client.upload_file(temp_file_path)
-            return image_url
+            return ImageUtils.upload_file(temp_file_path)
         except Exception as e:
             print(f"Error uploading image: {str(e)}")
             return None
         finally:
             # Clean up the temporary file
             if "temp_file_path" in locals():
-                os.unlink(temp_file_path)
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
                 
     @staticmethod
     def upload_file(file_path):
-        """Upload a file to FAL and return URL."""
+        """Upload a file to DeepGen and return URL."""
         try:
-            client = FalConfig().get_client()
-            file_url = client.upload_file(file_path)
-            return file_url
+            config = DeepGenConfig()
+            key = config.get_key()
+            if not key:
+                print("Cannot upload: API key missing")
+                return None
+                
+            url = f"{config.get_base_url()}/upload" # Assumption: /upload endpoint
+            
+            with open(file_path, 'rb') as f:
+                files = {'file': f}
+                headers = {'Authorization': f'Bearer {key}'}
+                response = requests.post(url, headers=headers, files=files)
+                
+            if response.status_code == 200:
+                data = response.json()
+                if "url" in data:
+                    return data["url"]
+                # Adjust based on actual response structure if known
+                print(f"Upload response: {data}")
+                return data.get("file_url") or data.get("url")
+            else:
+                print(f"Upload failed with status {response.status_code}: {response.text}")
+                return None
         except Exception as e:
             print(f"Error uploading file: {str(e)}")
             return None
@@ -162,7 +186,7 @@ class ImageUtils:
     
     @staticmethod
     def prepare_images(images):
-        """Preprocess images for use with FAL."""
+        """Preprocess images for use with DeepGen."""
         image_urls = []
         if images is not None:
 
@@ -194,12 +218,27 @@ class ResultProcessor:
         """Process image generation result and return tensor."""
         try:
             images = []
-            for img_info in result["images"]:
-                img_url = img_info["url"]
+            # DeepGen response structure might differ. Assuming similar to FAL for now:
+            # {"images": [{"url": "..."}]}
+            
+            image_list = result.get("images", [])
+            # Also handle single "image" key
+            if "image" in result and not image_list:
+                image_list = [result["image"]]
+                
+            for img_info in image_list:
+                img_url = img_info.get("url")
+                if not img_url:
+                    continue
+                    
                 img_response = requests.get(img_url)
                 img = Image.open(io.BytesIO(img_response.content))
                 img_array = np.array(img).astype(np.float32) / 255.0
                 images.append(img_array)
+
+            if not images:
+                print("No images found in result")
+                return ResultProcessor.create_blank_image()
 
             # Stack the images along a new first dimension
             stacked_images = np.stack(images, axis=0)
@@ -216,7 +255,17 @@ class ResultProcessor:
     def process_single_image_result(result):
         """Process single image result and return tensor."""
         try:
-            img_url = result["image"]["url"]
+            img_info = result.get("image")
+            if not img_info:
+                # try finding in images list
+                if "images" in result and len(result["images"]) > 0:
+                    img_info = result["images"][0]
+            
+            if not img_info:
+                print("No image found in result")
+                return ResultProcessor.create_blank_image()
+
+            img_url = img_info.get("url")
             img_response = requests.get(img_url)
             img = Image.open(io.BytesIO(img_response.content))
             img_array = np.array(img).astype(np.float32) / 255.0
@@ -240,52 +289,94 @@ class ResultProcessor:
         return (img_tensor,)
 
 
-class ApiHandler:
+class DeepGenApiHandler:
     """Utility functions for API interactions."""
 
     @staticmethod
     def submit_and_get_result(endpoint, arguments):
-        """Submit job to FAL API and get result."""
+        """Submit job to DeepGen API and get result."""
         try:
-            client = FalConfig().get_client()
-            handler = client.submit(endpoint, arguments=arguments)
-            return handler.get()
+            config = DeepGenConfig()
+            key = config.get_key()
+            base_url = config.get_base_url()
+            
+            # Construct URL: base_url + / + endpoint (alias_id) + /api
+            url = f"{base_url}/{endpoint}/api"
+            
+            headers = {
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json"
+            }
+            
+            print(f"Submitting to {url}")
+            response = requests.post(url, json=arguments, headers=headers)
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(f"DeepGen API Response: {result}")
+                return result
+            elif response.status_code == 201: # Accepted/Async?
+                # Handle polling if needed, but assuming sync for simple endpoints for now
+                # Or if it returns a request_id to poll
+                result = response.json()
+                print(f"DeepGen API Async Response: {result}")
+                if "request_id" in result:
+                    return DeepGenApiHandler._poll_result(result["request_id"])
+                return result
+            else:
+                raise Exception(f"API Error {response.status_code}: {response.text}")
+
         except Exception as e:
             print(f"Error submitting to {endpoint}: {str(e)}")
             raise e
+            
+    @staticmethod
+    def _poll_result(request_id):
+        """Poll for result."""
+        config = DeepGenConfig()
+        key = config.get_key()
+        base_url = config.get_base_url()
+        url = f"{base_url}/requests/{request_id}" # Assumption
+        headers = {"Authorization": f"Bearer {key}"}
+        
+        while True:
+            response = requests.get(url, headers=headers)
+            if response.status_code != 200:
+                raise Exception(f"Polling failed: {response.text}")
+            
+            data = response.json()
+            print(f"DeepGen Poll Response: {data}")
+            
+            status = data.get("status")
+            
+            if status == "COMPLETED":
+                return data.get("result", data)
+            elif status == "FAILED":
+                raise Exception(f"Job failed: {data.get('error')}")
+            
+            time.sleep(1)
 
     @staticmethod
     def submit_multiple_and_get_results(endpoint, arguments, variations):
-        """Submit multiple jobs concurrently to FAL API and get results."""
+        """Submit multiple jobs concurrently to DeepGen API and get results."""
         try:
-            # Run the async code in a thread to avoid event loop conflicts
+            # Simple serial implementation for now, or use ThreadPoolExecutor
+            results = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run,
-                    ApiHandler._submit_multiple_async(endpoint, arguments, variations)
-                )
-                return future.result()
+                futures = []
+                for i in range(variations):
+                    # Create copy of args
+                    args = arguments.copy()
+                    if "seed" in args:
+                        args["seed"] = args["seed"] + i
+                    futures.append(executor.submit(DeepGenApiHandler.submit_and_get_result, endpoint, args))
+                
+                for future in concurrent.futures.as_completed(futures):
+                    results.append(future.result())
+            return results
         except Exception as e:
             print(f"Error in submit_multiple_and_get_results: {str(e)}")
             raise e
-
-    @staticmethod
-    async def _submit_multiple_async(endpoint, arguments, variations):
-        """Submit multiple jobs concurrently and gather results."""
-        client = AsyncClient(key=FalConfig().get_key())
-
-        # Submit all jobs concurrently
-        handlers = await asyncio.gather(*[
-            client.submit(endpoint, arguments={**arguments, "seed": arguments.get("seed", 0) + i} if "seed" in arguments else arguments)
-            for i in range(variations)
-        ])
-
-        # Get all results concurrently
-        results = await asyncio.gather(*[
-            handler.get() for handler in handlers
-        ], return_exceptions=True)
-
-        return results
 
     @staticmethod
     def handle_video_generation_error(model_name, error):

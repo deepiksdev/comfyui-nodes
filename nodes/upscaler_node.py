@@ -1,7 +1,7 @@
-from .fal_utils import ApiHandler, FalConfig, ImageUtils, ResultProcessor
+from .deepgen_utils import DeepGenApiHandler, DeepGenConfig, ImageUtils, ResultProcessor
 
-# Initialize FalConfig
-fal_config = FalConfig()
+# Initialize DeepGenConfig
+deepgen_config = DeepGenConfig()
 
 
 class UpscalerNode:
@@ -38,12 +38,13 @@ class UpscalerNode:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_upscaled_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Upscaling"
 
     def generate_upscaled_image(
         self,
@@ -56,12 +57,13 @@ class UpscalerNode:
         num_inference_steps,
         enable_safety_checker,
         seed=-1,
+        alias_id=None
     ):
         try:
             # Upload the image using ImageUtils
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_image_generation_error(
+                return DeepGenApiHandler.handle_image_generation_error(
                     "clarity-upscaler", "Failed to upload image for upscaling"
                 )
 
@@ -80,12 +82,12 @@ class UpscalerNode:
             if seed != -1:
                 arguments["seed"] = seed
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/clarity-upscaler", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/clarity-upscaler", arguments
             )
             return ResultProcessor.process_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("clarity-upscaler", str(e))
+            return DeepGenApiHandler.handle_image_generation_error("clarity-upscaler", str(e))
 
 
 class SeedvrUpscalerNode:
@@ -101,24 +103,26 @@ class SeedvrUpscalerNode:
             },
             "optional": {
                 "seed": ("INT", {"default": -1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate_upscaled_image"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Upscaling"
 
     def generate_upscaled_image(
         self,
         image,
         upscale_factor,
         seed=-1,
+        alias_id=None
     ):
         try:
             # Upload the image using ImageUtils
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_image_generation_error(
+                return DeepGenApiHandler.handle_image_generation_error(
                     "seedvr-upscaler", "Failed to upload image for upscaling"
                 )
 
@@ -130,12 +134,12 @@ class SeedvrUpscalerNode:
             if seed != -1:
                 arguments["seed"] = seed
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/seedvr/upscale/image", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/seedvr/upscale/image", arguments
             )
             return ResultProcessor.process_single_image_result(result)
         except Exception as e:
-            return ApiHandler.handle_image_generation_error("seedvr-upscaler", str(e))
+            return DeepGenApiHandler.handle_image_generation_error("seedvr-upscaler", str(e))
 
 class SeedvrUpscaleVideoNode:
     @classmethod
@@ -156,13 +160,14 @@ class SeedvrUpscaleVideoNode:
                 "output_quality": (["low", "medium", "high", "maximum"], {"default": "high"}),
                 "output_write_mode": (["fast", "balanced", "small"], {"default": "balanced" }),
                 "output_format": (["X264 (.mp4)", "VP9 (.webm)","PRORES444 (.mov)","GIF (.gif)"], {"default": "X264 (.mp4)"}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
     FUNCTION = "generate_upscaled_video"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Upscaling"
 
     def generate_upscaled_video(
         self,
@@ -175,6 +180,7 @@ class SeedvrUpscaleVideoNode:
         output_format="X264 (.mp4)",
         output_quality="high",
         output_write_mode="balanced",
+        alias_id=None
     ):
         # try:
             
@@ -182,7 +188,7 @@ class SeedvrUpscaleVideoNode:
         if video is not None:
             video_url = ImageUtils.upload_file(video.get_stream_source())
         if not video_url or video_url=="":
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "bria-video-increase-resolution", "Failed to upload video for upscaling. No video URL provided, or Video provided."
             )
         arguments={
@@ -195,13 +201,13 @@ class SeedvrUpscaleVideoNode:
 "output_quality": output_quality,
 "output_write_mode": output_write_mode
 }
-        result = ApiHandler.submit_and_get_result(
-            "fal-ai/seedvr/upscale/video", arguments
+        result = DeepGenApiHandler.submit_and_get_result(
+            alias_id if alias_id else "deepgen/seedvr/upscale/video", arguments
         )
         return (result["video"]["url"],)
         # except Exception as e:
-        #     return ApiHandler.handle_video_generation_error(
-        #         "fal-ai/seedvr/upscale/video", str(e)
+        #     return DeepGenApiHandler.handle_video_generation_error(
+        #         "deepgen/seedvr/upscale/video", str(e)
         #     )
 
 class BriaVideoIncreaseResolutionNode:
@@ -219,20 +225,22 @@ class BriaVideoIncreaseResolutionNode:
                 "video": ("VIDEO",),
                 "input_video_url": ("STRING", {"default": ""}),
                 "output_container_and_codec": (["mp4_h264", "mp4_h265","mov_h265","mov_proresks", "webm_vp9","mkv_h265","mkv_h265", "mkv_vp9", "gif"], {"default": "mp4_h264"}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
     FUNCTION = "generate_upscaled_video"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Upscaling"
 
     def generate_upscaled_video(
         self,
         video =None,
         input_video_url=None,
         upscale_factor=2,
-        output_container_and_codec="mp4_h264"
+        output_container_and_codec="mp4_h264",
+        alias_id=None
     ):
         try:
             
@@ -240,7 +248,7 @@ class BriaVideoIncreaseResolutionNode:
             if video is not None:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url or video_url=="":
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "bria-video-increase-resolution", "Failed to upload video for upscaling. No video URL provided, or Video provided."
                 )
             arguments={
@@ -248,13 +256,13 @@ class BriaVideoIncreaseResolutionNode:
         "desired_increase": str(upscale_factor),
         "output_container_and_codec": output_container_and_codec
     }
-            result = ApiHandler.submit_and_get_result(
-                "bria/video/increase-resolution", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/bria/video/increase-resolution", arguments
             )
             return (result["video"]["url"],)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
-                "bria/video/increase-resolution", str(e)
+            return DeepGenApiHandler.handle_video_generation_error(
+                "deepgen/bria/video/increase-resolution", str(e)
             )
 
 
@@ -274,13 +282,14 @@ class TopazUpscaleVideoNode:
                 "input_video_url": ("STRING", {"default": ""}),
                 "use_fps": ("BOOLEAN", {"default": False}),
                 "target_fps": ("INT", {"default": 0, "min": 0, "max": 60}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
     FUNCTION = "generate_upscaled_video"
-    CATEGORY = "FAL/Image"
+    CATEGORY = "DeepGen/Upscaling"
 
     def generate_upscaled_video(
         self,
@@ -288,15 +297,16 @@ class TopazUpscaleVideoNode:
         input_video_url=None,
         upscale_factor=2.0,
         use_fps=False,
-        target_fps= 0
+        target_fps= 0,
+        alias_id=None
     ):
         try:
             video_url = input_video_url
             if video is not None:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url or video_url=="":
-                return ApiHandler.handle_video_generation_error(
-                    "fal-ai/topaz/upscale/video", "Failed to upload video for upscaling. No video URL provided, or Video provided."
+                return DeepGenApiHandler.handle_video_generation_error(
+                    "deepgen/topaz/upscale/video", "Failed to upload video for upscaling. No video URL provided, or Video provided."
                 )
             arguments={
         "video_url": video_url,
@@ -305,13 +315,13 @@ class TopazUpscaleVideoNode:
             if target_fps != 0 and use_fps:
                 arguments["target_fps"] = target_fps
      
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/topaz/upscale/video", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/topaz/upscale/video", arguments
             )
             return (result["video"]["url"],)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
-                "fal-ai/topaz/upscale/video", str(e)
+            return DeepGenApiHandler.handle_video_generation_error(
+                "deepgen/topaz/upscale/video", str(e)
             )
 
 

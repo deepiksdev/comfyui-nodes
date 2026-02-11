@@ -1,7 +1,7 @@
-from .fal_utils import ApiHandler, FalConfig, ImageUtils
+from .deepgen_utils import DeepGenApiHandler, DeepGenConfig, ImageUtils
 
-# Initialize FalConfig
-fal_config = FalConfig()
+# Initialize DeepGenConfig
+deepgen_config = DeepGenConfig()
 
 
 class VLMNode:
@@ -29,19 +29,20 @@ class VLMNode:
             "optional": {
                 "max_tokens": ("INT", {"default": 0, "min": 0, "max": 100000}),
                 "custom_model_name": ("STRING", {"default": "", "multiline": False}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_text"
-    CATEGORY = "FAL/VLM"
+    CATEGORY = "DeepGen/VLM"
 
-    def generate_text(self, prompt, model, system_prompt, image, temperature, reasoning, max_tokens=0, custom_model_name=""):
+    def generate_text(self, prompt, model, system_prompt, image, temperature, reasoning, max_tokens=0, custom_model_name="", alias_id=None):
         try:
             # Handle custom model selection
             if model == "Custom":
                 if not custom_model_name or custom_model_name.strip() == "":
-                    return ApiHandler.handle_text_generation_error(
+                    return DeepGenApiHandler.handle_text_generation_error(
                         "Custom", "Custom model name is required when 'Custom' is selected"
                     )
                 model = custom_model_name.strip()
@@ -56,7 +57,7 @@ class VLMNode:
                     single_image = image[i:i+1]
                     image_url = ImageUtils.upload_image(single_image)
                     if not image_url:
-                        return ApiHandler.handle_text_generation_error(
+                        return DeepGenApiHandler.handle_text_generation_error(
                             model, f"Failed to upload image {i+1}"
                         )
                     image_urls.append(image_url)
@@ -64,7 +65,7 @@ class VLMNode:
                 # Single image
                 image_url = ImageUtils.upload_image(image)
                 if not image_url:
-                    return ApiHandler.handle_text_generation_error(
+                    return DeepGenApiHandler.handle_text_generation_error(
                         model, "Failed to upload image"
                     )
                 image_urls.append(image_url)
@@ -83,12 +84,12 @@ class VLMNode:
             if max_tokens > 0:
                 arguments["max_tokens"] = max_tokens
 
-            result = ApiHandler.submit_and_get_result(
-                "openrouter/router/vision", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/openrouter/router/vision", arguments
             )
             return (result["output"],)
         except Exception as e:
-            return ApiHandler.handle_text_generation_error(model, str(e))
+            return DeepGenApiHandler.handle_text_generation_error(model, str(e))
 
 
 # Node class mappings

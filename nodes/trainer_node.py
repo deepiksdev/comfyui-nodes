@@ -5,10 +5,10 @@ import zipfile
 import torch
 from PIL import Image
 
-from .fal_utils import ApiHandler, FalConfig
+from .deepgen_utils import DeepGenApiHandler, DeepGenConfig, ImageUtils
 
-# Initialize FalConfig
-fal_config = FalConfig()
+# Initialize DeepGenConfig
+deepgen_config = DeepGenConfig()
 
 
 def create_zip_from_images(images):
@@ -39,11 +39,10 @@ def create_zip_from_images(images):
                     zf.write(temp_img_path, f"image_{idx}.png")
                     os.unlink(temp_img_path)
 
-            # Use fal_client.upload_file instead of ApiHandler.upload_file
-            client = FalConfig().get_client()
-            return client.upload_file(temp_zip.name)
+            # Use ImageUtils.upload_file instead of FalConfig client
+            return ImageUtils.upload_file(temp_zip.name)
     except Exception as e:
-        return ApiHandler.handle_text_generation_error(
+        return DeepGenApiHandler.handle_text_generation_error(
             "flux-lora-fast-training", f"Failed to create zip file: {str(e)}"
         )
 
@@ -66,13 +65,14 @@ class FluxLoraTrainerNode:
                 "images_zip_url": ("STRING", {"default": ""}),
                 "is_input_format_already_preprocessed": ("BOOLEAN", {"default": False}),
                 "data_archive_format": ("STRING", {"default": ""}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("lora_file_url",)
     FUNCTION = "train_lora"
-    CATEGORY = "FAL/Training"
+    CATEGORY = "DeepGen/Training"
 
     def train_lora(
         self,
@@ -84,6 +84,7 @@ class FluxLoraTrainerNode:
         images_zip_url="",
         is_input_format_already_preprocessed=False,
         data_archive_format="",
+        alias_id=None
     ):
         try:
             # Use provided zip URL if available, otherwise create and upload zip file
@@ -91,7 +92,7 @@ class FluxLoraTrainerNode:
                 images_zip_url if images_zip_url else create_zip_from_images(images)
             )
             if not images_url:
-                return ApiHandler.handle_text_generation_error(
+                return DeepGenApiHandler.handle_text_generation_error(
                     "flux-lora-fast-training", "Failed to upload images"
                 )
 
@@ -111,14 +112,14 @@ class FluxLoraTrainerNode:
                 arguments["data_archive_format"] = data_archive_format
 
             # Submit training job
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/flux-lora-fast-training", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/flux-lora-fast-training", arguments
             )
             lora_url = result["diffusers_lora_file"]["url"]
             return (lora_url,)
 
         except Exception as e:
-            return ApiHandler.handle_text_generation_error(
+            return DeepGenApiHandler.handle_text_generation_error(
                 "flux-lora-fast-training", str(e)
             )
 
@@ -143,13 +144,14 @@ class HunyuanVideoLoraTrainerNode:
                 "do_caption": ("BOOLEAN", {"default": True}),
                 "images_zip_url": ("STRING", {"default": ""}),
                 "data_archive_format": ("STRING", {"default": ""}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("lora_file_url",)
     FUNCTION = "train_lora"
-    CATEGORY = "FAL/Training"
+    CATEGORY = "DeepGen/Training"
 
     def train_lora(
         self,
@@ -160,6 +162,7 @@ class HunyuanVideoLoraTrainerNode:
         do_caption=True,
         images_zip_url="",
         data_archive_format="",
+        alias_id=None
     ):
         try:
             # Use provided zip URL if available, otherwise create and upload zip file
@@ -167,7 +170,7 @@ class HunyuanVideoLoraTrainerNode:
                 images_zip_url if images_zip_url else create_zip_from_images(images)
             )
             if not images_url:
-                return ApiHandler.handle_text_generation_error(
+                return DeepGenApiHandler.handle_text_generation_error(
                     "hunyuan-video-lora-training", "Failed to upload images"
                 )
 
@@ -186,14 +189,14 @@ class HunyuanVideoLoraTrainerNode:
                 arguments["data_archive_format"] = data_archive_format
 
             # Submit training job
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/hunyuan-video-lora-training", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/hunyuan-video-lora-training", arguments
             )
             lora_url = result["diffusers_lora_file"]["url"]
             return (lora_url,)
 
         except Exception as e:
-            return ApiHandler.handle_text_generation_error(
+            return DeepGenApiHandler.handle_text_generation_error(
                 "hunyuan-video-lora-training", str(e)
             )
 
@@ -216,13 +219,14 @@ class WanLoraTrainerNode:
             "optional": {
                 "trigger_phrase": ("STRING", {"default": ""}),
                 "auto_scale_input": ("BOOLEAN", {"default": True}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("lora_file_url",)
     FUNCTION = "train_lora"
-    CATEGORY = "FAL/Training"
+    CATEGORY = "DeepGen/Training"
 
     def train_lora(
         self,
@@ -231,10 +235,11 @@ class WanLoraTrainerNode:
         learning_rate,
         trigger_phrase="",
         auto_scale_input=True,
+        alias_id=None
     ):
         try:
             if not training_data_url:
-                return ApiHandler.handle_text_generation_error(
+                return DeepGenApiHandler.handle_text_generation_error(
                     "wan-trainer", "No training data URL provided"
                 )
 
@@ -250,12 +255,14 @@ class WanLoraTrainerNode:
                 arguments["trigger_phrase"] = trigger_phrase
 
             # Submit training job
-            result = ApiHandler.submit_and_get_result("fal-ai/wan-trainer", arguments)
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/wan-trainer", arguments
+            )
             lora_url = result["lora_file"]["url"]
             return (lora_url,)
 
         except Exception as e:
-            return ApiHandler.handle_text_generation_error("wan-trainer", str(e))
+            return DeepGenApiHandler.handle_text_generation_error("wan-trainer", str(e))
 
 
 class LtxVideoTrainerNode:
@@ -303,13 +310,14 @@ class LtxVideoTrainerNode:
                     {"default": "1:1"},
                 ),
                 "validation_reverse": ("BOOLEAN", {"default": False}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("lora_file_url",)
     FUNCTION = "train_lora"
-    CATEGORY = "FAL/Training"
+    CATEGORY = "DeepGen/Training"
 
     def train_lora(
         self,
@@ -330,6 +338,7 @@ class LtxVideoTrainerNode:
         validation_resolution="high",
         validation_aspect_ratio="1:1",
         validation_reverse=False,
+        alias_id=None
     ):
         try:
             if not training_data_url:
@@ -361,8 +370,8 @@ class LtxVideoTrainerNode:
                 arguments["trigger_phrase"] = trigger_phrase
 
             # Submit training job
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/ltx-video-trainer", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/ltx-video-trainer", arguments
             )
             lora_url = result["lora_file"]["url"]
             return (lora_url,)

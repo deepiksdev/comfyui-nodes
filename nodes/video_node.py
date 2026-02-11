@@ -1,17 +1,17 @@
 import asyncio
 import os
 import tempfile
+import concurrent.futures
 
 import cv2
 import numpy as np
 import requests
 import torch
-from fal_client import AsyncClient
 
-from .fal_utils import ApiHandler, FalConfig, ImageUtils
+from .deepgen_utils import DeepGenApiHandler, DeepGenConfig, ImageUtils
 
-# Initialize FalConfig
-fal_config = FalConfig()
+# Initialize DeepGenConfig
+deepgen_config = DeepGenConfig()
 
 class MiniMaxNode:
     @classmethod
@@ -21,17 +21,20 @@ class MiniMaxNode:
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "image": ("IMAGE",),
             },
+            "optional": {
+                "alias_id": ("STRING", {"default": ""}),
+            },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, image):
+    def generate_video(self, prompt, image, alias_id=None):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "minimax/video-01-live", "Failed to upload image"
                 )
 
@@ -40,13 +43,13 @@ class MiniMaxNode:
                 "image_url": image_url,
             }
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/minimax/video-01-live/image-to-video", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/minimax/video-01-live/image-to-video", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "minimax/video-01-live", str(e)
             )
 
@@ -58,23 +61,26 @@ class MiniMaxTextToVideoNode:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
             },
+            "optional": {
+                "alias_id": ("STRING", {"default": ""}),
+            },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt):
+    def generate_video(self, prompt, alias_id=None):
         try:
             arguments = {
                 "prompt": prompt,
             }
 
-            result = ApiHandler.submit_and_get_result("fal-ai/minimax-video", arguments)
+            result = DeepGenApiHandler.submit_and_get_result(alias_id if alias_id else "deepgen/minimax-video", arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("minimax-video", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("minimax-video", str(e))
 
 
 class MiniMaxSubjectReferenceNode:
@@ -86,17 +92,20 @@ class MiniMaxSubjectReferenceNode:
                 "subject_reference_image": ("IMAGE",),
                 "prompt_optimizer": ("BOOLEAN", {"default": True}),
             },
+            "optional": {
+                "alias_id": ("STRING", {"default": ""}),
+            },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, subject_reference_image, prompt_optimizer):
+    def generate_video(self, prompt, subject_reference_image, prompt_optimizer, alias_id=None):
         try:
             image_url = ImageUtils.upload_image(subject_reference_image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "minimax/video-01-subject-reference",
                     "Failed to upload subject reference image",
                 )
@@ -107,13 +116,13 @@ class MiniMaxSubjectReferenceNode:
                 "prompt_optimizer": prompt_optimizer,
             }
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/minimax/video-01-subject-reference", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/minimax/video-01-subject-reference", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "minimax/video-01-subject-reference", str(e)
             )
 
@@ -129,14 +138,15 @@ class KlingNode:
             },
             "optional": {
                 "image": ("IMAGE",),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, duration, aspect_ratio, image=None):
+    def generate_video(self, prompt, duration, aspect_ratio, image=None, alias_id=None):
         arguments = {
             "prompt": prompt,
             "duration": duration,
@@ -148,22 +158,22 @@ class KlingNode:
                 image_url = ImageUtils.upload_image(image)
                 if image_url:
                     arguments["image_url"] = image_url
-                    result = ApiHandler.submit_and_get_result(
-                        "fal-ai/kling-video/v1/standard/image-to-video", arguments
+                    result = DeepGenApiHandler.submit_and_get_result(
+                        alias_id if alias_id else "deepgen/kling-video/v1/standard/image-to-video", arguments
                     )
                 else:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "kling-video/v1/standard", "Failed to upload image"
                     )
             else:
-                result = ApiHandler.submit_and_get_result(
-                    "fal-ai/kling-video/v1/standard/text-to-video", arguments
+                result = DeepGenApiHandler.submit_and_get_result(
+                    alias_id if alias_id else "deepgen/kling-video/v1/standard/text-to-video", arguments
                 )
 
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v1/standard", str(e)
             )
 
@@ -180,12 +190,13 @@ class KlingPro10Node:
             "optional": {
                 "image": ("IMAGE",),
                 "tail_image": ("IMAGE",),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(
         self, prompt, duration, aspect_ratio, image=None, tail_image=None
@@ -208,26 +219,26 @@ class KlingPro10Node:
                         if tail_image_url:
                             arguments["tail_image_url"] = tail_image_url
                         else:
-                            return ApiHandler.handle_video_generation_error(
+                            return DeepGenApiHandler.handle_video_generation_error(
                                 "kling-video/v1/pro", "Failed to upload tail image"
                             )
 
-                    result = ApiHandler.submit_and_get_result(
-                        "fal-ai/kling-video/v1/pro/image-to-video", arguments
+                    result = DeepGenApiHandler.submit_and_get_result(
+                        alias_id if alias_id else "deepgen/kling-video/v1/pro/image-to-video", arguments
                     )
                 else:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "kling-video/v1/pro", "Failed to upload image"
                     )
             else:
-                result = ApiHandler.submit_and_get_result(
-                    "fal-ai/kling-video/v1/pro/text-to-video", arguments
+                result = DeepGenApiHandler.submit_and_get_result(
+                    alias_id if alias_id else "deepgen/kling-video/v1/pro/text-to-video", arguments
                 )
 
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v1/pro", str(e)
             )
 
@@ -244,15 +255,16 @@ class KlingPro16Node:
             "optional": {
                 "image": ("IMAGE",),
                 "tail_image": ("IMAGE",),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(
-        self, prompt, duration, aspect_ratio, image=None, tail_image=None
+        self, prompt, duration, aspect_ratio, image=None, tail_image=None, alias_id=None
     ):
         arguments = {
             "prompt": prompt,
@@ -272,26 +284,26 @@ class KlingPro16Node:
                         if tail_image_url:
                             arguments["tail_image_url"] = tail_image_url
                         else:
-                            return ApiHandler.handle_video_generation_error(
+                            return DeepGenApiHandler.handle_video_generation_error(
                                 "kling-video/v1.6/pro", "Failed to upload tail image"
                             )
 
-                    result = ApiHandler.submit_and_get_result(
-                        "fal-ai/kling-video/v1.6/pro/image-to-video", arguments
+                    result = DeepGenApiHandler.submit_and_get_result(
+                        alias_id if alias_id else "deepgen/kling-video/v1.6/pro/image-to-video", arguments
                     )
                 else:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "kling-video/v1.6/pro", "Failed to upload image"
                     )
             else:
-                result = ApiHandler.submit_and_get_result(
-                    "fal-ai/kling-video/v1.6/pro/text-to-video", arguments
+                result = DeepGenApiHandler.submit_and_get_result(
+                    alias_id if alias_id else "deepgen/kling-video/v1.6/pro/text-to-video", arguments
                 )
 
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v1.6/pro", str(e)
             )
 
@@ -307,14 +319,15 @@ class KlingMasterNode:
             },
             "optional": {
                 "image": ("IMAGE",),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, duration, aspect_ratio, image=None):
+    def generate_video(self, prompt, duration, aspect_ratio, image=None, alias_id=None):
         arguments = {
             "prompt": prompt,
             "duration": duration,
@@ -326,22 +339,22 @@ class KlingMasterNode:
                 image_url = ImageUtils.upload_image(image)
                 if image_url:
                     arguments["image_url"] = image_url
-                    result = ApiHandler.submit_and_get_result(
-                        "fal-ai/kling-video/v2/master/image-to-video", arguments
+                    result = DeepGenApiHandler.submit_and_get_result(
+                        alias_id if alias_id else "deepgen/kling-video/v2/master/image-to-video", arguments
                     )
                 else:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "kling-video/v2/master", "Failed to upload image"
                     )
             else:
-                result = ApiHandler.submit_and_get_result(
-                    "fal-ai/kling-video/v2/master/text-to-video", arguments
+                result = DeepGenApiHandler.submit_and_get_result(
+                    alias_id if alias_id else "deepgen/kling-video/v2/master/text-to-video", arguments
                 )
 
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v2/master", str(e)
             )
         
@@ -357,19 +370,20 @@ class KlingOmniImageToVideoNode:
                 "end_image": ("IMAGE",),
                 "duration": (["5", "10"], {"default": "5"}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, start_image, end_image=None, duration="5", variations=1):
+    def generate_video(self, prompt, start_image, end_image=None, duration="5", variations=1, alias_id=None):
         try:
             start_image_url = ImageUtils.upload_image(start_image)
             if not start_image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "kling-video/o1/image-to-video", "Failed to upload start image"
                 )
 
@@ -384,16 +398,16 @@ class KlingOmniImageToVideoNode:
                 if end_image_url:
                     arguments["end_image_url"] = end_image_url
                 else:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "kling-video/o1/image-to-video", "Failed to upload end image"
                     )
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/kling-video/o1/image-to-video", arguments, variations
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/kling-video/o1/image-to-video", arguments, variations
             )
             return ([r["video"]["url"] for r in results],)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/o1/image-to-video", str(e)
             )
 
@@ -423,13 +437,14 @@ class KlingOmniReferenceToVideoNode:
                 "duration": (["5", "10"], {"default": "5"}),
                 "aspect_ratio": (["16:9", "9:16", "1:1"], {"default": "16:9"}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(
         self,
@@ -451,7 +466,8 @@ class KlingOmniReferenceToVideoNode:
         element_7_reference_images=None,
         duration="5",
         aspect_ratio="16:9",
-        variations=1
+        variations=1,
+        alias_id=None
     ):
         try:
             arguments = {
@@ -493,12 +509,12 @@ class KlingOmniReferenceToVideoNode:
             if elements:
                 arguments["elements"] = elements
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/kling-video/o1/reference-to-video", arguments, variations
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/kling-video/o1/reference-to-video", arguments, variations
             )
             return ([r["video"]["url"] for r in results],)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/o1/reference-to-video", str(e)
             )
 
@@ -522,6 +538,7 @@ class KlingOmniVideoToVideoEditNode:
                 "element_4_frontal_image": ("IMAGE",),
                 "element_4_reference_images": ("IMAGE", {"default": None, "multiple": True}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
@@ -529,7 +546,7 @@ class KlingOmniVideoToVideoEditNode:
     RETURN_NAMES = ("video_url",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "edit_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def edit_video(
         self,
@@ -545,12 +562,13 @@ class KlingOmniVideoToVideoEditNode:
         element_3_reference_images=None,
         element_4_frontal_image=None,
         element_4_reference_images=None,
-        variations=1
+        variations=1,
+        alias_id=None
     ):
         try:
             video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "kling-video/o1/video-to-video/edit", "Failed to upload video"
                 )
 
@@ -593,12 +611,12 @@ class KlingOmniVideoToVideoEditNode:
             if elements:
                 arguments["elements"] = elements
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/kling-video/o1/video-to-video/edit", arguments, variations
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/kling-video/o1/video-to-video/edit", arguments, variations
             )
             return ([r["video"]["url"] for r in results],)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/o1/video-to-video/edit", str(e)
             )
 
@@ -624,6 +642,7 @@ class KlingOmniVideoToVideoReferenceNode:
                 "aspect_ratio": (["auto", "16:9", "9:16", "1:1"], {"default": "auto"}),
                 "duration": (["5", "10"], {"default": "5"}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
@@ -631,7 +650,7 @@ class KlingOmniVideoToVideoReferenceNode:
     RETURN_NAMES = ("video_url",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(
         self,
@@ -649,12 +668,13 @@ class KlingOmniVideoToVideoReferenceNode:
         element_4_reference_images=None,
         aspect_ratio="auto",
         duration="5",
-        variations=1
+        variations=1,
+        alias_id=None
     ):
         try:
             video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "kling-video/o1/video-to-video/reference", "Failed to upload video"
                 )
 
@@ -699,12 +719,12 @@ class KlingOmniVideoToVideoReferenceNode:
             if elements:
                 arguments["elements"] = elements
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/kling-video/o1/video-to-video/reference", arguments, variations
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/kling-video/o1/video-to-video/reference", arguments, variations
             )
             return ([r["video"]["url"] for r in results],)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/o1/video-to-video/reference", str(e)
             )
 
@@ -717,17 +737,20 @@ class RunwayGen3Node:
                 "image": ("IMAGE",),
                 "duration": (["5", "10"], {"default": "5"}),
             },
+            "optional": {
+                "alias_id": ("STRING", {"default": ""}),
+            },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, image, duration):
+    def generate_video(self, prompt, image, duration, alias_id=None):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "runway-gen3", "Failed to upload image"
                 )
 
@@ -737,13 +760,13 @@ class RunwayGen3Node:
                 "duration": duration,
             }
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/runway-gen3/turbo/image-to-video", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/runway-gen3/turbo/image-to-video", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("runway-gen3", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("runway-gen3", str(e))
 
 
 class LumaDreamMachineNode:
@@ -765,15 +788,16 @@ class LumaDreamMachineNode:
                 "image": ("IMAGE",),
                 "end_image": ("IMAGE",),
                 "loop": ("BOOLEAN", {"default": False}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(
-        self, prompt, mode, aspect_ratio, image=None, end_image=None, loop=False
+        self, prompt, mode, aspect_ratio, image=None, end_image=None, loop=False, alias_id=None
     ):
         arguments = {
             "prompt": prompt,
@@ -784,13 +808,13 @@ class LumaDreamMachineNode:
         try:
             if mode == "image-to-video":
                 if image is None:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "luma-dream-machine",
                         "Image is required for image-to-video mode",
                     )
                 image_url = ImageUtils.upload_image(image)
                 if not image_url:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "luma-dream-machine", "Failed to upload image"
                     )
                 arguments["image_url"] = image_url
@@ -800,19 +824,22 @@ class LumaDreamMachineNode:
                     if end_image_url:
                         arguments["end_image_url"] = end_image_url
                     else:
-                        return ApiHandler.handle_video_generation_error(
+                        return DeepGenApiHandler.handle_video_generation_error(
                             "luma-dream-machine", "Failed to upload end image"
                         )
 
-                endpoint = "fal-ai/luma-dream-machine/ray-2/image-to-video"
+                endpoint = "deepgen/luma-dream-machine/ray-2/image-to-video"
             else:
-                endpoint = "fal-ai/luma-dream-machine/ray-2"
+                endpoint = "deepgen/luma-dream-machine/ray-2"
 
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            if alias_id:
+                endpoint = alias_id
+
+            result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "luma-dream-machine", str(e)
             )
 
@@ -830,17 +857,20 @@ class Veo2ImageToVideoNode:
                 ),
                 "duration": (["5s", "6s", "7s", "8s"], {"default": "5s"}),
             },
+            "optional": {
+                "alias_id": ("STRING", {"default": ""}),
+            },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, image, aspect_ratio, duration):
+    def generate_video(self, prompt, image, aspect_ratio, duration, alias_id=None):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "veo2", "Failed to upload image"
                 )
 
@@ -851,13 +881,13 @@ class Veo2ImageToVideoNode:
                 "duration": duration,
             }
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/veo2/image-to-video", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/veo2/image-to-video", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("veo2", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("veo2", str(e))
 
 
 class WanProNode:
@@ -872,19 +902,20 @@ class WanProNode:
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, image, seed=0, enable_safety_checker=True, variations=1):
+    def generate_video(self, prompt, image, seed=0, enable_safety_checker=True, variations=1, alias_id=None):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-pro", "Failed to upload image"
                 )
 
@@ -898,13 +929,13 @@ class WanProNode:
             if seed != 0:
                 arguments["seed"] = seed
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/wan-pro/image-to-video", arguments, variations
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/wan-pro/image-to-video", arguments, variations
             )
 
             return ([r["video"]["url"] for r in results],)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("wan-pro", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("wan-pro", str(e))
 
 class Wan25Node:
     @classmethod
@@ -925,13 +956,14 @@ class Wan25Node:
                 "negative_prompt": ("STRING", {"default": "low resolution, error, worst quality, low quality, defects", "multiline": True}),
                 "enable_prompt_expansion": ("BOOLEAN", {"default": True}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(
         self,
@@ -943,11 +975,12 @@ class Wan25Node:
         negative_prompt="low resolution, error, worst quality, low quality, defects",
         enable_prompt_expansion=True,
         variations=1,
+        alias_id=None
     ):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-25", "Failed to upload image"
                 )
 
@@ -965,14 +998,14 @@ class Wan25Node:
                 arguments["seed"] = seed
 
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/wan-25-preview/image-to-video", arguments, variations
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/wan-25-preview/image-to-video", arguments, variations
             )
 
             return ([r["video"]["url"] for r in results],)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("wan-25", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("wan-25", str(e))
         
         
 class WanVACEVideoEditNode:
@@ -998,6 +1031,7 @@ class WanVACEVideoEditNode:
                 "auto_downsample_min_fps": ("INT", {"default": 15, "min": 1, "max": 60}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
@@ -1005,7 +1039,7 @@ class WanVACEVideoEditNode:
     RETURN_NAMES = ("video_url",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "edit_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def edit_video(
         self,
@@ -1021,18 +1055,19 @@ class WanVACEVideoEditNode:
         auto_downsample_min_fps=15,
         enable_safety_checker=True,
         variations=1,
+        alias_id=None
     ):
         try:
-            if video is None and input_video_url is "":
-                return ApiHandler.handle_video_generation_error(
+            if video is None and input_video_url == "":
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-vace", "Video or Video Frames input is required."
                 )
-            if video is None and input_video_url is not "":
+            if video is None and input_video_url != "":
                 video_url = input_video_url
             else:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-vace", "Failed to upload video"
                 )
             arguments = {
@@ -1073,8 +1108,8 @@ class WanVACEVideoEditNode:
             if image_urls:
                 arguments["image_urls"] = image_urls
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/wan-vace-apps/video-edit",
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/wan-vace-apps/video-edit",
                 arguments,
                 variations
             )
@@ -1082,7 +1117,7 @@ class WanVACEVideoEditNode:
             return ([r["video"]["url"] for r in results],)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("wan-vace", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("wan-vace", str(e))
 
 
 class Wan2214bAnimateReplaceNode:
@@ -1110,6 +1145,7 @@ class Wan2214bAnimateReplaceNode:
                 "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
                 "return_frames_zip": ("BOOLEAN", {"default": False}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
@@ -1117,7 +1153,7 @@ class Wan2214bAnimateReplaceNode:
     RETURN_NAMES = ("video_url","frames_zip_url",)
     OUTPUT_IS_LIST = (True,True)
     FUNCTION = "edit_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def edit_video(
         self,
@@ -1136,25 +1172,26 @@ class Wan2214bAnimateReplaceNode:
         enable_output_safety_checker=False,
         return_frames_zip=False,
         variations=1,
+        alias_id=None,
     ):
         try:
-            if video is None and input_video_url is "":
-                return ApiHandler.handle_video_generation_error(
+            if video is None and input_video_url == "":
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-22animatereplace", "Video or Video Frames input is required."
                 )
-            if video is None and input_video_url is not "":
+            if video is None and input_video_url != "":
                 video_url = input_video_url
             else:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-22animatereplace", "Failed to upload video"
                 )
 
           
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-22animatereplace", "Failed to upload image"
                 )
 
@@ -1174,8 +1211,8 @@ class Wan2214bAnimateReplaceNode:
                 "return_frames_zip": return_frames_zip,
             }
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/wan/v2.2-14b/animate/replace",
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/wan/v2.2-14b/animate/replace",
                 arguments,
                 variations
             )
@@ -1186,7 +1223,7 @@ class Wan2214bAnimateReplaceNode:
             return (video_url, frames_zip_url)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("wan-22animatereplace", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("wan-22animatereplace", str(e))
 
 
 
@@ -1216,6 +1253,7 @@ class Wan2214bAnimateMoveNode:
                 "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
                 "return_frames_zip": ("BOOLEAN", {"default": False}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
@@ -1223,7 +1261,7 @@ class Wan2214bAnimateMoveNode:
     RETURN_NAMES = ("video_url","frames_zip_url",)
     OUTPUT_IS_LIST = (True,True)
     FUNCTION = "edit_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def edit_video(
         self,
@@ -1242,24 +1280,25 @@ class Wan2214bAnimateMoveNode:
         enable_output_safety_checker=False,
         return_frames_zip=False,
         variations=1,
+        alias_id=None,
     ):
         try:
-            if video is None and input_video_url is "":
-                return ApiHandler.handle_video_generation_error(
+            if video is None and input_video_url == "":
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-22animatereplace", "Video or Video Frames input is required."
                 )
-            if video is None and input_video_url is not "":
+            if video is None and input_video_url != "":
                 video_url = input_video_url
             else:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-22animatereplace", "Failed to upload video"
                 )
           
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-22animatemove", "Failed to upload image"
                 )
 
@@ -1278,8 +1317,8 @@ class Wan2214bAnimateMoveNode:
                 "enable_output_safety_checker": enable_output_safety_checker,
                 "return_frames_zip": return_frames_zip,
             }
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/wan/v2.2-14b/animate/move",
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/wan/v2.2-14b/animate/move",
                 arguments,
                 variations
             )
@@ -1290,7 +1329,7 @@ class Wan2214bAnimateMoveNode:
             return (video_url, frames_zip_url)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("wan-22animatemove", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("wan-22animatemove", str(e))
 
 
 
@@ -1335,6 +1374,7 @@ class Wan22VACEFun14bNode:
                 "enable_safety_checker": ("BOOLEAN", {"default": False}),
                 "enable_output_safety_checker": ("BOOLEAN", {"default": False}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
@@ -1342,7 +1382,7 @@ class Wan22VACEFun14bNode:
     RETURN_NAMES = ("video_url", "frames_zip_url",)
     OUTPUT_IS_LIST = (True, True,)
     FUNCTION = "edit_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def edit_video(
         self,
@@ -1377,16 +1417,17 @@ class Wan22VACEFun14bNode:
         enable_safety_checker=False,
         enable_output_safety_checker=False,
         variations=1,
+        alias_id=None,
     ):
         try:
             if video is None:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-22-vace-fun-a14b", "Video input is required."
                 )
 
             video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan-22-vace-fun-a14b", "Failed to upload video"
                 )
 
@@ -1452,8 +1493,8 @@ class Wan22VACEFun14bNode:
                     arguments["last_frame_image_url"] = last_frame_url
 
             # Submit to API with task-specific endpoint
-            results = ApiHandler.submit_multiple_and_get_results(
-                f"fal-ai/wan-22-vace-fun-a14b/{task}",
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else f"deepgen/wan-22-vace-fun-a14b/{task}",
                 arguments,
                 variations
             )
@@ -1465,7 +1506,7 @@ class Wan22VACEFun14bNode:
             return (video_url, frames_zip_url)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("wan-22-vace-fun-a14b", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("wan-22-vace-fun-a14b", str(e))
 
 
 # =============================================================================
@@ -1529,6 +1570,7 @@ class DYWanFun22Node:
                 "lora_path_4": ("STRING", {"default": ""}),
                 "lora_strength_4": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
                 "lora_transformer_4": (["high", "low", "both"], {"default": "high"}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
@@ -1536,7 +1578,7 @@ class DYWanFun22Node:
     RETURN_NAMES = ("video_url", "frames_zip_url",)
     OUTPUT_IS_LIST = (True, True,)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration/DY"
+    CATEGORY = "DeepGen/VideoGeneration/DY"
 
     def generate_video(
         self,
@@ -1585,17 +1627,18 @@ class DYWanFun22Node:
         lora_path_4="",
         lora_strength_4=1.0,
         lora_transformer_4="high",
+        alias_id=None
     ):
         try:
             if ref_image is None:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "dy-wan-fun-22", "Reference image is required."
                 )
 
             # Upload reference image
             ref_image_url = ImageUtils.upload_image(ref_image)
             if not ref_image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "dy-wan-fun-22", "Failed to upload reference image"
                 )
 
@@ -1693,8 +1736,8 @@ class DYWanFun22Node:
                 arguments["loras"] = loras
 
             # Submit to API
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/dy-wan-fun-22",
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/dy-wan-fun-22",
                 arguments,
                 variations
             )
@@ -1706,7 +1749,7 @@ class DYWanFun22Node:
             return (video_url, frames_zip_url)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("dy-wan-fun-22", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("dy-wan-fun-22", str(e))
 
 
 
@@ -1729,13 +1772,14 @@ class DYWanUpscalerNode:
                 "image_size": (["custom", "landscape_16_9", "landscape_4_3", "portrait_16_9", "portrait_4_3", "square", "square_hd"], {"default": "custom"}),
                 "custom_width": ("INT", {"default": 1920, "min": 0, "max": 8192, "step": 8}),
                 "custom_height": ("INT", {"default": 1080, "min": 0, "max": 8192, "step": 8}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
     FUNCTION = "upscale_video"
-    CATEGORY = "FAL/VideoGeneration/DY"
+    CATEGORY = "DeepGen/VideoGeneration/DY"
 
     def upscale_video(
         self,
@@ -1750,11 +1794,12 @@ class DYWanUpscalerNode:
         fps=24,
         image_size="custom",
         custom_width=1920,
-        custom_height=1080
+        custom_height=1080,
+        alias_id=None
     ):
         try:
             if video is None and video_url == "":
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "dy-wan-upscaler", "Video input is required."
                 )
 
@@ -1762,7 +1807,7 @@ class DYWanUpscalerNode:
             if video:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
                 if not video_url:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "dy-wan-upscaler", "Failed to upload video"
                     )
 
@@ -1788,8 +1833,8 @@ class DYWanUpscalerNode:
                 arguments["image_size"] = image_size
 
             # Submit to API
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/dy-wan-upscaler",
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/dy-wan-upscaler",
                 arguments,
             )
 
@@ -1797,7 +1842,7 @@ class DYWanUpscalerNode:
             return (video_url,)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("dy-wan-upscaler", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("dy-wan-upscaler", str(e))
 
 
 # =============================================================================
@@ -1822,13 +1867,14 @@ class PixverseSwapNode:
             "optional": {
                 "video": ("VIDEO", {"default": None}),
                 "input_video_url": ("STRING", {"default": ""}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
     FUNCTION = "edit_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def edit_video(
         self,
@@ -1838,25 +1884,26 @@ class PixverseSwapNode:
         keyframe_id=1,
         quality="720p",
         original_sound_switch=True,
-        mode="person"):
+        mode="person",
+        alias_id=None):
         try:
-            if video is None and input_video_url is "":
-                return ApiHandler.handle_video_generation_error(
+            if video is None and input_video_url == "":
+                return DeepGenApiHandler.handle_video_generation_error(
                     "pixverse-swap", "Video or Video Frames input is required."
                 )
-            if video is None and input_video_url is not "":
+            if video is None and input_video_url != "":
                 video_url = input_video_url
             else:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "pixverse-swap", "Failed to upload video"
                 )
 
           
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "pixverse-swap", "Failed to upload image"
                 )
 
@@ -1868,15 +1915,15 @@ class PixverseSwapNode:
         "original_sound_switch": original_sound_switch,
         "mode": mode
     }
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/pixverse/swap",
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/pixverse/swap",
                 arguments,
             )
 
             return (result["video"]["url"],)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("pixverse-swap", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("pixverse-swap", str(e))
 
 
 
@@ -1894,13 +1941,14 @@ class KreaWan14bVideoToVideoNode:
                 "video": ("VIDEO", {"default": None}),
                 "input_video_url": ("STRING", {"default": ""}),
                 "seed": ("INT", {"default": 42}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
     FUNCTION = "edit_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def edit_video(
         self,
@@ -1910,18 +1958,19 @@ class KreaWan14bVideoToVideoNode:
         input_video_url="",
         seed=24,
         enable_prompt_expansion=True,
+        alias_id=None
     ):
         try:
-            if video is None and input_video_url is "":
-                return ApiHandler.handle_video_generation_error(
+            if video is None and input_video_url == "":
+                return DeepGenApiHandler.handle_video_generation_error(
                     "krea-wan-14b", "Video or Video URL input is required."
                 )
-            if video is None and input_video_url is not "":
+            if video is None and input_video_url != "":
                 video_url = input_video_url
             else:
                 video_url = ImageUtils.upload_file(video.get_stream_source())
             if not video_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "krea-wan-14b", "Failed to upload video"
                 )
             arguments={
@@ -1931,15 +1980,15 @@ class KreaWan14bVideoToVideoNode:
                     "video_url": video_url,
                     "seed": seed
                 }
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/krea-wan-14b/video-to-video",
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/krea-wan-14b/video-to-video",
                 arguments,
             )
 
             return (result["video"]["url"],)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("krea-wan-14b", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("krea-wan-14b", str(e))
 
 
 
@@ -1961,13 +2010,14 @@ class InfinityStarTextToVideoNode:
                 "tau_video": ("FLOAT", {"default": 0.4, "min": 0.0, "max": 2}),
                 "enhance_prompt": ("BOOLEAN", {"default": True}),
                 "seed": ("INT", {"default": 42}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_url",)
     FUNCTION = "edit_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def edit_video(
         self,
@@ -1978,6 +2028,7 @@ class InfinityStarTextToVideoNode:
         aspect_ratio="16:9",
         guidance_scale=7.5,
         tau_video=0.4,
+        alias_id=None
     ):
         try:
             arguments={
@@ -1989,15 +2040,15 @@ class InfinityStarTextToVideoNode:
                     "tau_video": tau_video,
                     "seed": seed
                 }
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/infinity-star/text-to-video",
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/infinity-star/text-to-video",
                 arguments,
             )
 
             return (result["video"]["url"],)
 
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("infinity-star-text-to-video", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("infinity-star-text-to-video", str(e))
 
 
 
@@ -2038,10 +2089,10 @@ class CombinedVideoGenerationNode:
         "wanpro_video",
     )
     FUNCTION = "generate_videos"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    async def generate_klingpro_video(
-        self, client, prompt, image_url, kling_duration, kling_luma_aspect_ratio
+    def generate_klingpro_video(
+        self, prompt, image_url, kling_duration, kling_luma_aspect_ratio
     ):
         try:
             arguments = {
@@ -2050,22 +2101,16 @@ class CombinedVideoGenerationNode:
                 "duration": kling_duration,
                 "aspect_ratio": kling_luma_aspect_ratio,
             }
-            handler = await client.submit(
-                "fal-ai/kling-video/v1.6/pro/image-to-video", arguments=arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/kling-video/v1.6/pro/image-to-video", arguments
             )
-            while True:
-                result = await handler.get()
-                if "video" in result and "url" in result["video"]:
-                    return result["video"]["url"]
-                elif result.get("status") == "FAILED":
-                    raise Exception("Video generation failed")
-                await asyncio.sleep(1)
+            return result["video"]["url"]
         except Exception as e:
             print(f"Error generating KlingPro video: {str(e)}")
             return "Error: Unable to generate KlingPro video."
 
-    async def generate_klingmaster_video(
-        self, client, prompt, image_url, kling_duration, kling_luma_aspect_ratio
+    def generate_klingmaster_video(
+        self, prompt, image_url, kling_duration, kling_luma_aspect_ratio
     ):
         try:
             arguments = {
@@ -2074,42 +2119,30 @@ class CombinedVideoGenerationNode:
                 "duration": kling_duration,
                 "aspect_ratio": kling_luma_aspect_ratio,
             }
-            handler = await client.submit(
-                "fal-ai/kling-video/v2/master/image-to-video", arguments=arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/kling-video/v2/master/image-to-video", arguments
             )
-            while True:
-                result = await handler.get()
-                if "video" in result and "url" in result["video"]:
-                    return result["video"]["url"]
-                elif result.get("status") == "FAILED":
-                    raise Exception("Video generation failed")
-                await asyncio.sleep(1)
+            return result["video"]["url"]
         except Exception as e:
             print(f"Error generating KlingMaster video: {str(e)}")
             return "Error: Unable to generate KlingMaster video."
 
-    async def generate_minimax_video(self, client, prompt, image_url):
+    def generate_minimax_video(self, prompt, image_url):
         try:
             arguments = {
                 "prompt": prompt,
                 "image_url": image_url,
             }
-            handler = await client.submit(
-                "fal-ai/minimax/video-01-live/image-to-video", arguments=arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/minimax/video-01-live/image-to-video", arguments
             )
-            while True:
-                result = await handler.get()
-                if "video" in result and "url" in result["video"]:
-                    return result["video"]["url"]
-                elif result.get("status") == "FAILED":
-                    raise Exception("Video generation failed")
-                await asyncio.sleep(1)
+            return result["video"]["url"]
         except Exception as e:
             print(f"Error generating MiniMax video: {str(e)}")
             return "Error: Unable to generate MiniMax video."
 
-    async def generate_luma_video(
-        self, client, prompt, image_url, kling_luma_aspect_ratio, luma_loop
+    def generate_luma_video(
+        self, prompt, image_url, kling_luma_aspect_ratio, luma_loop
     ):
         try:
             arguments = {
@@ -2118,22 +2151,16 @@ class CombinedVideoGenerationNode:
                 "aspect_ratio": kling_luma_aspect_ratio,
                 "loop": luma_loop,
             }
-            handler = await client.submit(
-                "fal-ai/luma-dream-machine/ray-2/image-to-video", arguments=arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/luma-dream-machine/ray-2/image-to-video", arguments
             )
-            while True:
-                result = await handler.get()
-                if "video" in result and "url" in result["video"]:
-                    return result["video"]["url"]
-                elif result.get("status") == "FAILED":
-                    raise Exception("Video generation failed")
-                await asyncio.sleep(1)
+            return result["video"]["url"]
         except Exception as e:
             print(f"Error generating Luma video: {str(e)}")
             return "Error: Unable to generate Luma video."
 
-    async def generate_veo2_video(
-        self, client, prompt, image_url, aspect_ratio, duration
+    def generate_veo2_video(
+        self, prompt, image_url, aspect_ratio, duration
     ):
         try:
             arguments = {
@@ -2142,21 +2169,15 @@ class CombinedVideoGenerationNode:
                 "aspect_ratio": aspect_ratio,
                 "duration": duration,
             }
-            handler = await client.submit(
-                "fal-ai/veo2/image-to-video", arguments=arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/veo2/image-to-video", arguments
             )
-            while True:
-                result = await handler.get()
-                if "video" in result and "url" in result["video"]:
-                    return result["video"]["url"]
-                elif result.get("status") == "FAILED":
-                    raise Exception("Video generation failed")
-                await asyncio.sleep(1)
+            return result["video"]["url"]
         except Exception as e:
             print(f"Error generating Veo2 video: {str(e)}")
             return "Error: Unable to generate Veo2 video."
 
-    async def generate_wanpro_video(self, client, prompt, image_url):
+    def generate_wanpro_video(self, prompt, image_url):
         try:
             arguments = {
                 "prompt": prompt,
@@ -2165,16 +2186,10 @@ class CombinedVideoGenerationNode:
                 "seed": None,  # Let the API choose a random seed
             }
 
-            handler = await client.submit(
-                "fal-ai/wan-pro/image-to-video", arguments=arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/wan-pro/image-to-video", arguments
             )
-            while True:
-                result = await handler.get()
-                if "video" in result and "url" in result["video"]:
-                    return result["video"]["url"]
-                elif result.get("status") == "FAILED":
-                    raise Exception("Video generation failed")
-                await asyncio.sleep(1)
+            return result["video"]["url"]
         except Exception as e:
             print(f"Error generating Wan Pro video: {str(e)}")
             return "Error: Unable to generate Wan Pro video."
@@ -2196,17 +2211,19 @@ class CombinedVideoGenerationNode:
         enable_wanpro,
     ):
         try:
+            loop = asyncio.get_running_loop()
+            
+            # Helper to run in executor
+            def run_task(func, *args):
+                return loop.run_in_executor(None, func, *args)
+            
             tasks = []
-            results = [None] * 6  # Initialize results list with None values
-
-            # Create async client with the same key as the sync client
-            client = AsyncClient(key=fal_config.get_key())
-
+            
             # Add tasks based on enabled services
             if enable_klingpro:
                 tasks.append(
-                    self.generate_klingpro_video(
-                        client,
+                    run_task(
+                        self.generate_klingpro_video,
                         prompt,
                         image_url,
                         kling_duration,
@@ -2218,8 +2235,8 @@ class CombinedVideoGenerationNode:
 
             if enable_klingmaster:
                 tasks.append(
-                    self.generate_klingmaster_video(
-                        client,
+                    run_task(
+                        self.generate_klingmaster_video,
                         prompt,
                         image_url,
                         kling_duration,
@@ -2230,14 +2247,18 @@ class CombinedVideoGenerationNode:
                 tasks.append(None)
 
             if enable_minimax:
-                tasks.append(self.generate_minimax_video(client, prompt, image_url))
+                tasks.append(run_task(self.generate_minimax_video, prompt, image_url))
             else:
                 tasks.append(None)
 
             if enable_luma:
                 tasks.append(
-                    self.generate_luma_video(
-                        client, prompt, image_url, kling_luma_aspect_ratio, luma_loop
+                    run_task(
+                        self.generate_luma_video,
+                        prompt,
+                        image_url,
+                        kling_luma_aspect_ratio,
+                        luma_loop,
                     )
                 )
             else:
@@ -2245,31 +2266,33 @@ class CombinedVideoGenerationNode:
 
             if enable_veo2:
                 tasks.append(
-                    self.generate_veo2_video(
-                        client, prompt, image_url, veo2_aspect_ratio, veo2_duration
+                    run_task(
+                        self.generate_veo2_video,
+                        prompt,
+                        image_url,
+                        veo2_aspect_ratio,
+                        veo2_duration,
                     )
                 )
             else:
                 tasks.append(None)
 
             if enable_wanpro:
-                tasks.append(self.generate_wanpro_video(client, prompt, image_url))
+                tasks.append(run_task(self.generate_wanpro_video, prompt, image_url))
             else:
                 tasks.append(None)
 
             # Filter out None tasks and execute them
-            valid_tasks = [task for task in tasks if task is not None]
+            valid_stats_indices = [i for i, task in enumerate(tasks) if task is not None]
+            valid_tasks = [tasks[i] for i in valid_stats_indices]
+            
+            results = ["Service disabled"] * 6
+            
             if valid_tasks:
                 completed_results = await asyncio.gather(*valid_tasks)
-
-                # Place results in their correct positions
-                result_index = 0
-                for i, task in enumerate(tasks):
-                    if task is not None:
-                        results[i] = completed_results[result_index]
-                        result_index += 1
-                    else:
-                        results[i] = "Service disabled"
+                
+                for i, result in zip(valid_stats_indices, completed_results):
+                    results[i] = result
 
             return results
         except Exception as e:
@@ -2339,23 +2362,26 @@ class VideoUpscalerNode:
                     {"default": 2.0, "min": 1.0, "max": 4.0, "step": 0.5},
                 ),
             },
+            "optional": {
+                "alias_id": ("STRING", {"default": ""}),
+            },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "upscale_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def upscale_video(self, video_url, scale):
+    def upscale_video(self, video_url, scale, alias_id=None):
         try:
             arguments = {"video_url": video_url, "scale": scale}
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/video-upscaler", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/video-upscaler", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("video-upscaler", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("video-upscaler", str(e))
 
 class UploadVideoNode:
     @classmethod
@@ -2553,19 +2579,20 @@ class SeedanceImageToVideoNode:
             },
             "optional": {
                 "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, image, resolution, duration, camera_fixed, seed=-1):
+    def generate_video(self, prompt, image, resolution, duration, camera_fixed, seed=-1, alias_id=None):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
-                    "fal-ai/bytedance/seedance/v1/lite/image-to-video",
+                return DeepGenApiHandler.handle_video_generation_error(
+                    "deepgen/bytedance/seedance/v1/lite/image-to-video",
                     "Failed to upload image",
                 )
 
@@ -2581,14 +2608,14 @@ class SeedanceImageToVideoNode:
             if seed != -1:
                 arguments["seed"] = seed
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/bytedance/seedance/v1/lite/image-to-video", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/bytedance/seedance/v1/lite/image-to-video", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
-                "fal-ai/bytedance/seedance/v1/lite/image-to-video", str(e)
+            return DeepGenApiHandler.handle_video_generation_error(
+                "deepgen/bytedance/seedance/v1/lite/image-to-video", str(e)
             )
 
 
@@ -2605,14 +2632,15 @@ class SeedanceTextToVideoNode:
             },
             "optional": {
                 "seed": ("INT", {"default": -1, "min": -1, "max": 2147483647}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, aspect_ratio, resolution, duration, camera_fixed, seed=-1):
+    def generate_video(self, prompt, aspect_ratio, resolution, duration, camera_fixed, seed=-1, alias_id=None):
         try:
             arguments = {
                 "prompt": prompt,
@@ -2626,14 +2654,14 @@ class SeedanceTextToVideoNode:
             if seed != -1:
                 arguments["seed"] = seed
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/bytedance/seedance/v1/lite/text-to-video", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                alias_id if alias_id else "deepgen/bytedance/seedance/v1/lite/text-to-video", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
-                "fal-ai/bytedance/seedance/v1/lite/text-to-video", str(e)
+            return DeepGenApiHandler.handle_video_generation_error(
+                "deepgen/bytedance/seedance/v1/lite/text-to-video", str(e)
             )
 
 
@@ -2650,21 +2678,22 @@ class SeedanceProImageToVideoNode:
                 "end_image": ("IMAGE",),
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
                 "cfg_scale": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
-                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1})
+                "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
-    def generate_video(self, prompt, image, duration, end_image=None, negative_prompt="", cfg_scale=0.5, variations=1):
+    def generate_video(self, prompt, image, duration, end_image=None, negative_prompt="", cfg_scale=0.5, variations=1, alias_id=None):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
-                    "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+                return DeepGenApiHandler.handle_video_generation_error(
+                    "deepgen/bytedance/seedance/v1/pro/image-to-video",
                     "Failed to upload image",
                 )
 
@@ -2682,20 +2711,20 @@ class SeedanceProImageToVideoNode:
                 if end_image_url:
                     arguments["end_image_url"] = end_image_url
                 else:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "seedance/v1/pro/image-to-video", "Failed to upload end image"
                     )
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/bytedance/seedance/v1/pro/image-to-video", arguments, variations
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                alias_id if alias_id else "deepgen/bytedance/seedance/v1/pro/image-to-video", arguments, variations
             )
 
             # Return list of video URLs
             return ([r["video"]["url"] for r in results],)
         
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
-                "fal-ai/bytedance/seedance/v1/pro/image-to-video", str(e)
+            return DeepGenApiHandler.handle_video_generation_error(
+                "deepgen/bytedance/seedance/v1/pro/image-to-video", str(e)
             )
 
 
@@ -2718,7 +2747,7 @@ class Veo3Node:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(
         self,
@@ -2743,11 +2772,11 @@ class Veo3Node:
             arguments["seed"] = seed
 
         try:
-            result = ApiHandler.submit_and_get_result("fal-ai/veo3", arguments)
+            result = DeepGenApiHandler.submit_and_get_result("deepgen/veo3", arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error("veo3", str(e))
+            return DeepGenApiHandler.handle_video_generation_error("veo3", str(e))
 
 
 class FalKling21ProImageToVideo:
@@ -2768,13 +2797,13 @@ class FalKling21ProImageToVideo:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(self, prompt, image, duration, negative_prompt="blur, distort, and low quality", cfg_scale=0.5, tail_image=None):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "kling-video/v2.1/pro", "Failed to upload image"
                 )
 
@@ -2792,17 +2821,17 @@ class FalKling21ProImageToVideo:
                 if tail_image_url:
                     arguments["tail_image_url"] = tail_image_url
                 else:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "kling-video/v2.1/pro", "Failed to upload tail image"
                     )
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/kling-video/v2.1/pro/image-to-video", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/kling-video/v2.1/pro/image-to-video", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v2.1/pro", str(e)
             )
 
@@ -2827,13 +2856,13 @@ class FalKling25TurboProImageToVideo:
     RETURN_TYPES = ("STRING",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(self, prompt, image, duration, negative_prompt="blur, distort, and low quality", cfg_scale=0.5, tail_image=None, variations=1):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "kling-video/v2.5-turbo/pro", "Failed to upload image"
                 )
 
@@ -2851,19 +2880,19 @@ class FalKling25TurboProImageToVideo:
                 if tail_image_url:
                     arguments["tail_image_url"] = tail_image_url
                 else:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "kling-video/v2.5-turbo/pro", "Failed to upload tail image"
                     )
 
-            results = ApiHandler.submit_multiple_and_get_results(
-                "fal-ai/kling-video/v2.5-turbo/pro/image-to-video", arguments, variations
+            results = DeepGenApiHandler.submit_multiple_and_get_results(
+                "deepgen/kling-video/v2.5-turbo/pro/image-to-video", arguments, variations
             )
 
             # Return list of video URLs
             return ([r["video"]["url"] for r in results],)
             
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v2.5-turbo/pro", str(e)
             )
 
@@ -2887,14 +2916,14 @@ class FalKling26ProVideo:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(self, prompt, duration, image=None, aspect_ratio="16:9", negative_prompt="blur, distort, and low quality", cfg_scale=0.5, generate_audio=True):
         try:
             # Conditional routing based on whether image is provided
             if image is None:
                 # T2V mode: Use text-to-video endpoint
-                endpoint = "fal-ai/kling-video/v2.6/pro/text-to-video"
+                endpoint = "deepgen/kling-video/v2.6/pro/text-to-video"
                 arguments = {
                     "prompt": prompt,
                     "duration": duration,
@@ -2907,10 +2936,10 @@ class FalKling26ProVideo:
                 # I2V mode: Use image-to-video endpoint
                 image_url = ImageUtils.upload_image(image)
                 if not image_url:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "kling-video/v2.6/pro", "Failed to upload image"
                     )
-                endpoint = "fal-ai/kling-video/v2.6/pro/image-to-video"
+                endpoint = "deepgen/kling-video/v2.6/pro/image-to-video"
                 arguments = {
                     "prompt": prompt,
                     "image_url": image_url,
@@ -2919,11 +2948,11 @@ class FalKling26ProVideo:
                     "generate_audio": generate_audio,
                 }
 
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "kling-video/v2.6/pro", str(e)
             )
 
@@ -2951,7 +2980,7 @@ class FalWan26Video:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(self, prompt, duration, image=None, audio_url="", aspect_ratio="16:9", resolution="1080p", negative_prompt="low resolution, error, worst quality, low quality, defects", enable_prompt_expansion=True, multi_shots=True, seed=-1, enable_safety_checker=True):
         try:
@@ -2973,7 +3002,7 @@ class FalWan26Video:
                 # I2V mode: Use image-to-video endpoint
                 image_url = ImageUtils.upload_image(image)
                 if not image_url:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "wan/v2.6", "Failed to upload image"
                     )
                 endpoint = "wan/v2.6/image-to-video"
@@ -2996,11 +3025,11 @@ class FalWan26Video:
             if seed != -1:
                 arguments["seed"] = seed
 
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "wan/v2.6", str(e)
             )
 
@@ -3029,7 +3058,7 @@ class FalWan26ReferenceToVideo:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(self, prompt, video1_url, video2_url="", video3_url="", aspect_ratio="16:9", resolution="1080p", duration="5", negative_prompt="low resolution, error, worst quality, low quality, defects", enable_prompt_expansion=True, multi_shots=True, seed=-1, enable_safety_checker=True):
         try:
@@ -3043,7 +3072,7 @@ class FalWan26ReferenceToVideo:
                 video_urls.append(video3_url.strip())
 
             if not video_urls:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "wan/v2.6/reference-to-video", "At least one video URL is required"
                 )
 
@@ -3063,11 +3092,11 @@ class FalWan26ReferenceToVideo:
             if seed != -1:
                 arguments["seed"] = seed
 
-            result = ApiHandler.submit_and_get_result("wan/v2.6/reference-to-video", arguments)
+            result = DeepGenApiHandler.submit_and_get_result("wan/v2.6/reference-to-video", arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "wan/v2.6/reference-to-video", str(e)
             )
 
@@ -3090,13 +3119,13 @@ class FalSora2ProImageToVideo:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(self, prompt, image, resolution="auto", aspect_ratio="auto", duration=4, delete_video=True):
         try:
             image_url = ImageUtils.upload_image(image)
             if not image_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "sora-2/pro", "Failed to upload image"
                 )
 
@@ -3109,13 +3138,13 @@ class FalSora2ProImageToVideo:
                 "delete_video": delete_video,
             }
 
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/sora-2/image-to-video/pro", arguments
+            result = DeepGenApiHandler.submit_and_get_result(
+                "deepgen/sora-2/image-to-video/pro", arguments
             )
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "sora-2/pro", str(e)
             )
 
@@ -3139,20 +3168,20 @@ class FalVeo31FirstLastFrameToVideo:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(self, prompt, first_frame, last_frame=None, duration="8s", aspect_ratio="auto", resolution="720p", generate_audio=True):
         try:
             first_frame_url = ImageUtils.upload_image(first_frame)
             if not first_frame_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "veo3.1", "Failed to upload first frame"
                 )
 
             # Conditional routing based on whether last_frame is provided
             if last_frame is None:
                 # Use image-to-video endpoint (first frame only)
-                endpoint = "fal-ai/veo3.1/image-to-video"
+                endpoint = "deepgen/veo3.1/image-to-video"
                 arguments = {
                     "prompt": prompt,
                     "image_url": first_frame_url,
@@ -3163,10 +3192,10 @@ class FalVeo31FirstLastFrameToVideo:
                 }
             else:
                 # Use first-last-frame-to-video endpoint (both frames)
-                endpoint = "fal-ai/veo3.1/first-last-frame-to-video"
+                endpoint = "deepgen/veo3.1/first-last-frame-to-video"
                 last_frame_url = ImageUtils.upload_image(last_frame)
                 if not last_frame_url:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "veo3.1", "Failed to upload last frame"
                     )
                 arguments = {
@@ -3179,11 +3208,11 @@ class FalVeo31FirstLastFrameToVideo:
                     "generate_audio": generate_audio,
                 }
 
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "veo3.1", str(e)
             )
 
@@ -3207,20 +3236,20 @@ class FalVeo31FastFirstLastFrameToVideo:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_video"
-    CATEGORY = "FAL/VideoGeneration"
+    CATEGORY = "DeepGen/VideoGeneration"
 
     def generate_video(self, prompt, first_frame, last_frame=None, duration="8s", aspect_ratio="auto", resolution="720p", generate_audio=True):
         try:
             first_frame_url = ImageUtils.upload_image(first_frame)
             if not first_frame_url:
-                return ApiHandler.handle_video_generation_error(
+                return DeepGenApiHandler.handle_video_generation_error(
                     "veo3.1/fast", "Failed to upload first frame"
                 )
 
             # Conditional routing based on whether last_frame is provided
             if last_frame is None:
                 # Use image-to-video endpoint (first frame only)
-                endpoint = "fal-ai/veo3.1/fast/image-to-video"
+                endpoint = "deepgen/veo3.1/fast/image-to-video"
                 arguments = {
                     "prompt": prompt,
                     "image_url": first_frame_url,
@@ -3231,10 +3260,10 @@ class FalVeo31FastFirstLastFrameToVideo:
                 }
             else:
                 # Use first-last-frame-to-video endpoint (both frames)
-                endpoint = "fal-ai/veo3.1/fast/first-last-frame-to-video"
+                endpoint = "deepgen/veo3.1/fast/first-last-frame-to-video"
                 last_frame_url = ImageUtils.upload_image(last_frame)
                 if not last_frame_url:
-                    return ApiHandler.handle_video_generation_error(
+                    return DeepGenApiHandler.handle_video_generation_error(
                         "veo3.1/fast", "Failed to upload last frame"
                     )
                 arguments = {
@@ -3247,11 +3276,11 @@ class FalVeo31FastFirstLastFrameToVideo:
                     "generate_audio": generate_audio,
                 }
 
-            result = ApiHandler.submit_and_get_result(endpoint, arguments)
+            result = DeepGenApiHandler.submit_and_get_result(endpoint, arguments)
             video_url = result["video"]["url"]
             return (video_url,)
         except Exception as e:
-            return ApiHandler.handle_video_generation_error(
+            return DeepGenApiHandler.handle_video_generation_error(
                 "veo3.1/fast", str(e)
             )
 

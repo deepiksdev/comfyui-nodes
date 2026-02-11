@@ -1,7 +1,7 @@
-from .fal_utils import ApiHandler, FalConfig
+from .deepgen_utils import DeepGenApiHandler, DeepGenConfig
 
-# Initialize FalConfig
-fal_config = FalConfig()
+# Initialize DeepGenConfig
+deepgen_config = DeepGenConfig()
 
 
 class LLMNode:
@@ -28,20 +28,21 @@ class LLMNode:
             "optional": {
                 "max_tokens": ("INT", {"default": 0, "min": 0, "max": 100000}),
                 "custom_model_name": ("STRING", {"default": "", "multiline": False}),
+                "alias_id": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING", "STRING",)
     RETURN_NAMES = ("output", "reasoning",)
     FUNCTION = "generate_text"
-    CATEGORY = "FAL/LLM"
+    CATEGORY = "DeepGen/LLM"
 
-    def generate_text(self, prompt, model, system_prompt, temperature, reasoning, max_tokens=0, custom_model_name=""):
+    def generate_text(self, prompt, model, system_prompt, temperature, reasoning, max_tokens=0, custom_model_name="", alias_id=None):
         try:
             # Handle custom model selection
             if model == "Custom":
                 if not custom_model_name or custom_model_name.strip() == "":
-                    error_result = ApiHandler.handle_text_generation_error(
+                    error_result = DeepGenApiHandler.handle_text_generation_error(
                         "Custom", "Custom model name is required when 'Custom' is selected"
                     )
                     return (error_result[0], "")
@@ -60,7 +61,7 @@ class LLMNode:
             if max_tokens > 0:
                 arguments["max_tokens"] = max_tokens
 
-            result = ApiHandler.submit_and_get_result("openrouter/router", arguments)
+            result = DeepGenApiHandler.submit_and_get_result(alias_id if alias_id else "deepgen/openrouter/router", arguments)
 
             # Extract output and reasoning
             output_text = result.get("output", "")
@@ -68,7 +69,7 @@ class LLMNode:
 
             return (output_text, reasoning_text)
         except Exception as e:
-            error_result = ApiHandler.handle_text_generation_error(model, str(e))
+            error_result = DeepGenApiHandler.handle_text_generation_error(model, str(e))
             return (error_result[0], "")
 
 

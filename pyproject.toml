@@ -1,15 +1,15 @@
 [project]
-name = "fal-api"
-description = "Custom nodes for using fal API. Video generation with Kling, Runway, Luma. Image generation with Flux. LLMs and VLMs OpenAI, Claude, Llama and Gemini."
+name = "deepgen-api"
+description = "Custom nodes for using DeepGen API. Video generation, Image generation, Upscaling, LLMs and VLMs."
 version = "1.0.12"
 license = {file = "LICENSE"}
-dependencies = ["fal-client"]
+dependencies = ["requests"]
 
 [project.urls]
-Repository = "https://github.com/gokayfem/ComfyUI-fal-API"
+Repository = "https://github.com/deepgen-app/ComfyUI-DeepGen-API"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = "gokayfem"
-DisplayName = "ComfyUI-fal-API"
+PublisherId = "deepgen"
+DisplayName = "ComfyUI-DeepGen-API"
 Icon = ""
