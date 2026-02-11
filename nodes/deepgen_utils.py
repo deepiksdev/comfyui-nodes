@@ -463,7 +463,7 @@ class DeepGenApiHandler:
             # number_of_steps is also used in trainers
             "number_of_steps": "steps",
             "guidance_scale": "cfg_scale",
-            "num_images": "n",
+            "num_images": "num_results",
         }
 
         for old_key, new_key in field_mapping.items():
