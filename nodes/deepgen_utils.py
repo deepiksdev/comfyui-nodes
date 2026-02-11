@@ -39,15 +39,23 @@ class DeepGenConfig:
         if os.path.exists(env_path):
             with open(env_path, "r") as f:
                 for line in f:
+                    line = line.strip()
                     if line.startswith("DEEPGEN_API_KEY="):
-                        self._key = line.strip().split("=", 1)[1]
+                        self._key = line.split("=", 1)[1]
                         # Remove quotes if present
                         if (self._key.startswith('"') and self._key.endswith('"')) or \
                            (self._key.startswith("'") and self._key.endswith("'")):
                             self._key = self._key[1:-1]
                         os.environ["DEEPGEN_API_KEY"] = self._key
                         print(f"DEEPGEN_API_KEY loaded from {env_path}")
-                        break
+                    elif line.startswith("DEEPGEN_API_URL="):
+                        url = line.split("=", 1)[1]
+                         # Remove quotes if present
+                        if (url.startswith('"') and url.endswith('"')) or \
+                           (url.startswith("'") and url.endswith("'")):
+                            url = url[1:-1]
+                        os.environ["DEEPGEN_API_URL"] = url
+                        print(f"DEEPGEN_API_URL loaded from {env_path}: {url}")
 
         try:
             if not self._key and os.environ.get("DEEPGEN_API_KEY") is not None:
