@@ -10,14 +10,15 @@ class VLMNode:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
                 "alias_id": ("STRING", {"default": "deepgen/openrouter/router/vision"}),
             },
             "optional": {
+                "image": ("IMAGE",),
                 "system_prompt": ("STRING", {"default": "", "multiline": True}),
                 "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
                 "reasoning": ("BOOLEAN", {"default": False}),
                 "max_tokens": ("INT", {"default": 1024, "min": 0, "max": 100000}),
+                "attachments_urls": ("LIST",),
             },
         }
 
@@ -25,35 +26,37 @@ class VLMNode:
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/VLM"
 
-    def generate_text(self, prompt, image, alias_id, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024):
+    def generate_text(self, prompt, alias_id, image=None, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None):
         try:
-            # Handle multiple images - image can be a batch
             image_urls = []
+            
+            # Handle list of attachments if provided
+            if attachments_urls:
+                if isinstance(attachments_urls, list):
+                    image_urls.extend([u for u in attachments_urls if isinstance(u, str) and u.strip()])
+                elif isinstance(attachments_urls, str):
+                    image_urls.extend([u.strip() for u in attachments_urls.split("\n") if u.strip()])
 
-            # Check if image is a batch (4D tensor) or single image (3D tensor)
-            if len(image.shape) == 4:
-                # Batch of images
-                for i in range(image.shape[0]):
-                    single_image = image[i:i+1]
-                    image_url = ImageUtils.upload_image(single_image)
-                    if not image_url:
-                        return DeepGenApiHandler.handle_text_generation_error(
-                            alias_id, f"Failed to upload image {i+1}"
-                        )
-                    image_urls.append(image_url)
-            else:
-                # Single image
-                image_url = ImageUtils.upload_image(image)
-                if not image_url:
-                    return DeepGenApiHandler.handle_text_generation_error(
-                        alias_id, "Failed to upload image"
-                    )
-                image_urls.append(image_url)
+            # Handle image tensor if provided
+            if image is not None:
+                # Check if image is a batch (4D tensor) or single image (3D tensor)
+                if len(image.shape) == 4:
+                    # Batch of images
+                    for i in range(image.shape[0]):
+                        single_image = image[i:i+1]
+                        image_url = ImageUtils.upload_image(single_image)
+                        if image_url:
+                            image_urls.append(image_url)
+                else:
+                    # Single image
+                    image_url = ImageUtils.upload_image(image)
+                    if image_url:
+                        image_urls.append(image_url)
 
             arguments = {
                 "prompt": prompt,
                 "system_prompt": system_prompt,
-                "image_urls": image_urls,
+                "attachments_urls": image_urls,
                 "temperature": temperature,
                 "reasoning": reasoning,
                 "stream": False,
