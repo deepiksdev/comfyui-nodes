@@ -1,4 +1,4 @@
-from .deepgen_utils import DeepGenApiHandler, DeepGenConfig, ImageUtils
+from .deepgen_utils import DeepGenApiHandler, DeepGenConfig, ImageUtils, ResultProcessor
 
 # Initialize DeepGenConfig
 deepgen_config = DeepGenConfig()
