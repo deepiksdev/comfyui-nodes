@@ -19,6 +19,7 @@ class VLMNode:
                 "reasoning": ("BOOLEAN", {"default": False}),
                 "max_tokens": ("INT", {"default": 1024, "min": 0, "max": 100000}),
                 "attachments_urls": ("STRING", {"default": "", "multiline": True}),
+                "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
             },
         }
 
@@ -26,7 +27,7 @@ class VLMNode:
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/VLM"
 
-    def generate_text(self, prompt, alias_id, image=None, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None):
+    def generate_text(self, prompt, alias_id, image=None, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None, endpoint="https://api.deepgen.app"):
         try:
             image_urls = []
             attachments_files = []
@@ -68,7 +69,7 @@ class VLMNode:
             if max_tokens > 0:
                 arguments["max_tokens"] = max_tokens
 
-            result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments)
+            result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
             text_result = ResultProcessor.process_text_result(result)
             return (text_result[0],)
         except Exception as e:

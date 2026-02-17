@@ -542,17 +542,21 @@ class DeepGenApiHandler:
         return mapped
 
     @staticmethod
-    def submit_and_get_result(endpoint, arguments):
+    def submit_and_get_result(endpoint, arguments, api_url=None):
         """Submit job to DeepGen API and get result."""
         try:
             config = DeepGenConfig()
             key = config.get_key()
-            base_url = config.get_base_url()
+            base_url = api_url if api_url else config.get_base_url()
             
             # Map arguments to DeepGen Gateway format
             mapped_arguments = DeepGenApiHandler._map_arguments(arguments)
             
             # Construct URL: base_url + / + endpoint (alias_id) + /api
+            # Handle potential double slashes if base_url ends with /
+            if base_url.endswith("/"):
+                base_url = base_url[:-1]
+                
             url = f"{base_url}/{endpoint}/api"
             
             headers = {
@@ -574,7 +578,7 @@ class DeepGenApiHandler:
                 result = response.json()
                 print(f"DeepGen API Async Response: {result}")
                 if "request_id" in result:
-                    return DeepGenApiHandler._poll_result(result["request_id"])
+                    return DeepGenApiHandler._poll_result(result["request_id"], api_url=base_url)
                 return result
             else:
                 raise Exception(f"API Error {response.status_code}: {response.text}")
@@ -584,11 +588,16 @@ class DeepGenApiHandler:
             raise e
             
     @staticmethod
-    def _poll_result(request_id):
+    def _poll_result(request_id, api_url=None):
         """Poll for result."""
         config = DeepGenConfig()
         key = config.get_key()
-        base_url = config.get_base_url()
+        base_url = api_url if api_url else config.get_base_url()
+        
+        # Handle potential double slashes if base_url ends with /
+        if base_url.endswith("/"):
+            base_url = base_url[:-1]
+
         url = f"{base_url}/requests/{request_id}" # Assumption
         headers = {"Authorization": f"Bearer {key}"}
         
@@ -610,7 +619,7 @@ class DeepGenApiHandler:
             time.sleep(1)
 
     @staticmethod
-    def submit_multiple_and_get_results(endpoint, arguments, variations):
+    def submit_multiple_and_get_results(endpoint, arguments, variations, api_url=None):
         """Submit multiple jobs concurrently to DeepGen API and get results."""
         try:
             # Simple serial implementation for now, or use ThreadPoolExecutor
@@ -622,7 +631,7 @@ class DeepGenApiHandler:
                     args = arguments.copy()
                     if "seed" in args:
                         args["seed"] = args["seed"] + i
-                    futures.append(executor.submit(DeepGenApiHandler.submit_and_get_result, endpoint, args))
+                    futures.append(executor.submit(DeepGenApiHandler.submit_and_get_result, endpoint, args, api_url))
                 
                 for future in concurrent.futures.as_completed(futures):
                     results.append(future.result())

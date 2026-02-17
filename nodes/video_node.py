@@ -27,6 +27,7 @@ class VideoNode:
                 "loop": ("BOOLEAN", {"default": False}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
                 "alias_id": ("STRING", {"default": "deepgen/minimax/video-01-live/image-to-video"}),
+                "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
             },
         }
 
@@ -45,7 +46,8 @@ class VideoNode:
         aspect_ratio="16:9",
         loop=False,
         variations=1,
-        alias_id="deepgen/minimax/video-01-live/image-to-video"
+        alias_id="deepgen/minimax/video-01-live/image-to-video",
+        endpoint="https://api.deepgen.app",
     ):
         try:
             arguments = {
@@ -76,12 +78,12 @@ class VideoNode:
                     arguments["end_image_url"] = img_url
 
             if variations > 1:
-                results = DeepGenApiHandler.submit_multiple_and_get_results(alias_id, arguments, variations)
+                results = DeepGenApiHandler.submit_multiple_and_get_results(alias_id, arguments, variations, api_url=endpoint)
                 video_urls = [ResultProcessor.process_video_result(r)[0] for r in results]
                 # Returning first one as primary, though we could return a list if we changed RETURN_TYPES
                 return (video_urls[0],)
             else:
-                result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments)
+                result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 return ResultProcessor.process_video_result(result)
 
         except Exception as e:

@@ -61,6 +61,7 @@ class TrainerNode:
                 "do_caption": ("BOOLEAN", {"default": True}),
                 "auto_scale_input": ("BOOLEAN", {"default": True}),
                 "alias_id": ("STRING", {"default": "deepgen/flux-lora-fast-training"}),
+                "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
             },
         }
 
@@ -80,7 +81,8 @@ class TrainerNode:
         is_style=False,
         do_caption=True,
         auto_scale_input=True,
-        alias_id="deepgen/flux-lora-fast-training"
+        alias_id="deepgen/flux-lora-fast-training",
+        endpoint="https://api.deepgen.app",
     ):
         try:
             # Handle training data
@@ -112,7 +114,7 @@ class TrainerNode:
                 arguments["training_data_url"] = data_url
 
             # Submit training job
-            result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments)
+            result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
             return ResultProcessor.process_file_result(result)
 
         except Exception as e:

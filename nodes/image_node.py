@@ -37,6 +37,7 @@ class ImageNode:
                 "mask_image": ("IMAGE",),
                 "alias_id": ("STRING", {"default": "flux_schnell"}),
                 "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
+                "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
             },
         }
 
@@ -61,6 +62,7 @@ class ImageNode:
         mask_image=None,
         alias_id="deepgen/flux/dev",
         loras="",
+        endpoint="https://api.deepgen.app",
     ):
         arguments = {
             "prompt": prompt,
@@ -99,7 +101,7 @@ class ImageNode:
                 arguments["mask_url"] = mask_url
 
         try:
-            result = ApiHandler.submit_and_get_result(alias_id, arguments)
+            result = ApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
             return ResultProcessor.process_image_result(result)
         except Exception as e:
             return ApiHandler.handle_image_generation_error("ImageNode", e)

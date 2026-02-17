@@ -22,7 +22,9 @@ class UpscalerNode:
                 "resemblance": ("FLOAT", {"default": 0.6, "min": 0.0, "max": 1.0, "step": 0.05}),
                 "guidance_scale": ("FLOAT", {"default": 4.0, "min": 1.0, "max": 20.0, "step": 0.5}),
                 "num_inference_steps": ("INT", {"default": 18, "min": 1, "max": 100}),
+                "num_inference_steps": ("INT", {"default": 18, "min": 1, "max": 100}),
                 "alias_id": ("STRING", {"default": "deepgen/clarity-upscaler"}),
+                "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
             },
         }
 
@@ -44,7 +46,8 @@ class UpscalerNode:
         resemblance=0.6,
         guidance_scale=4.0,
         num_inference_steps=18,
-        alias_id="deepgen/clarity-upscaler"
+        alias_id="deepgen/clarity-upscaler",
+        endpoint="https://api.deepgen.app",
     ):
         try:
             arguments = {
@@ -71,7 +74,7 @@ class UpscalerNode:
                 # Add other video specific arguments if any (like from topas or bria)
                 # For now keeping it generic
                 
-                result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments)
+                result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 video_url_res = result.get("video", {}).get("url") or result.get("url")
                 return (None, video_url_res)
             else:
@@ -92,7 +95,7 @@ class UpscalerNode:
                     "num_inference_steps": num_inference_steps,
                 })
                 
-                result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments)
+                result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 processed = ResultProcessor.process_image_result(result)
                 return (processed[0], "")
 
