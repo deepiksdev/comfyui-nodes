@@ -36,6 +36,7 @@ class ImageNode:
                 "image": ("IMAGE",),
                 "mask_image": ("IMAGE",),
                 "alias_id": ("STRING", {"default": "flux_schnell"}),
+                "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             },
         }
 
@@ -59,6 +60,7 @@ class ImageNode:
         image=None,
         mask_image=None,
         alias_id="deepgen/flux/dev",
+        loras="",
     ):
         arguments = {
             "prompt": prompt,
@@ -69,6 +71,12 @@ class ImageNode:
             "enable_safety_checker": enable_safety_checker,
             "output_format": output_format,
         }
+
+        if loras:
+            # Parse loras string into a list of strings
+            loras_list = [l.strip() for l in loras.splitlines() if l.strip()]
+            if loras_list:
+                arguments["loras"] = loras_list
 
         # Handle image size
         if image_size == "custom":
