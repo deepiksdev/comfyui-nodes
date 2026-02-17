@@ -61,7 +61,7 @@ class ImageNode:
         image=None,
         mask_image=None,
         alias_id="deepgen/flux/dev",
-        loras="",
+        loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
     ):
         arguments = {
@@ -75,8 +75,22 @@ class ImageNode:
         }
 
         if loras:
-            # Parse loras string into a list of strings
-            loras_list = [l.strip() for l in loras.splitlines() if l.strip()]
+            # Parse loras string into a list of dictionaries
+            loras_list = []
+            for l in loras.splitlines():
+                if not l.strip():
+                    continue
+                parts = l.split(",")
+                path = parts[0].strip()
+                scale = 1.0
+                if len(parts) > 1:
+                    try:
+                        scale = float(parts[1].strip())
+                    except ValueError:
+                        print(f"Warning: Invalid scale for LoRA {path}, defaulting to 1.0")
+                
+                loras_list.append({"path": path, "scale": scale})
+
             if loras_list:
                 arguments["loras"] = loras_list
 
