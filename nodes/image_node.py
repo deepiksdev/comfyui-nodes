@@ -10,25 +10,13 @@ class ImageNode:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "image_size": (
-                    [
-                        "square_hd",
-                        "square",
-                        "portrait_4_3",
-                        "portrait_16_9",
-                        "landscape_4_3",
-                        "landscape_16_9",
-                        "custom",
-                    ],
-                    {"default": "landscape_4_3"},
-                ),
                 "width": ("INT", {"default": 1024, "min": 256, "max": 4096, "step": 8}),
                 "height": ("INT", {"default": 768, "min": 256, "max": 4096, "step": 8}),
             },
             "optional": {
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
-                "seed": ("INT", {"default": -1}),
-                "num_inference_steps": ("INT", {"default": 4, "min": 1, "max": 40}),
+                "seed_value": ("INT", {"default": -1}),
+                "steps": ("INT", {"default": 4, "min": 1, "max": 40}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
@@ -48,12 +36,11 @@ class ImageNode:
     def generate_image(
         self,
         prompt,
-        image_size,
         width,
         height,
         negative_prompt="",
-        seed=-1,
-        num_inference_steps=28,
+        seed_value=-1,
+        steps=28, # Fixed argument name to match parameter
         guidance_scale=3.5,
         num_images=1,
         enable_safety_checker=True,
@@ -67,7 +54,9 @@ class ImageNode:
         arguments = {
             "prompt": prompt,
             "negative_prompt": negative_prompt,
-            "num_inference_steps": num_inference_steps,
+            "width": width,
+            "height": height,
+            "steps": steps,
             "guidance_scale": guidance_scale,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker,
@@ -94,14 +83,9 @@ class ImageNode:
             if loras_list:
                 arguments["loras"] = loras_list
 
-        # Handle image size
-        if image_size == "custom":
-            arguments["image_size"] = {"width": width, "height": height}
-        else:
-            arguments["image_size"] = image_size
 
-        if seed != -1:
-            arguments["seed"] = seed
+        if seed_value != -1:
+            arguments["seed"] = seed_value
 
         # Handle image and mask if provided
         if image is not None:
