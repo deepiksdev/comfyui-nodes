@@ -28,7 +28,7 @@ class ImageNode:
             "optional": {
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
                 "seed": ("INT", {"default": -1}),
-                "num_inference_steps": ("INT", {"default": 4, "min": 1, "max": 12}),
+                "num_inference_steps": ("INT", {"default": 4, "min": 1, "max": 40}),
                 "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1}),
                 "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
                 "enable_safety_checker": ("BOOLEAN", {"default": True}),
