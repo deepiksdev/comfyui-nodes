@@ -14,15 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install comfy-cli
-        run: pip install comfy-cli
-
       - name: Publish node to registry
+        uses: Comfy-Org/publish-node-action@main
         env:
           REGISTRY_ACCESS_TOKEN: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
-        run: comfy node publish --yes
