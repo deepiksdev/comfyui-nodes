@@ -106,19 +106,31 @@ class ImageNode:
             if k.startswith('image_') and v is not None:
                 images_to_process.append(v)
 
-        all_image_urls = []
+        attachments_files = []
         for img in images_to_process:
-            urls = ImageUtils.prepare_images(img)
-            if urls:
-                all_image_urls.extend(urls)
+            if len(img.shape) == 4:
+                for i in range(img.shape[0]):
+                    single_image = img[i:i+1]
+                    attach = ImageUtils.get_attachment_file(single_image, filename=f"image_{len(attachments_files)}.png")
+                    if attach:
+                        attachments_files.append(attach)
+            else:
+                attach = ImageUtils.get_attachment_file(img, filename=f"image_{len(attachments_files)}.png")
+                if attach:
+                    attachments_files.append(attach)
 
-        if all_image_urls:
-            arguments["image_urls"] = all_image_urls
+        if attachments_files:
+            arguments["attachments_files"] = attachments_files
         
         if mask_image is not None:
-            mask_url = ImageUtils.upload_image(mask_image)
-            if mask_url:
-                arguments["mask_url"] = mask_url
+            # Note: Mask may also need to be sent differently if /upload is unsupported.
+            # Currently fallback to old behavior, but ideally would be attachments_files too
+            # or integrated alongside other attachments.
+            mask_attach = ImageUtils.get_attachment_file(mask_image, filename="mask.png")
+            if mask_attach:
+                if "attachments_files" not in arguments:
+                    arguments["attachments_files"] = []
+                arguments["attachments_files"].append(mask_attach)
 
         try:
             result = ApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
