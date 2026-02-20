@@ -1,5 +1,8 @@
 from .deepgen_utils import DeepGenApiHandler as ApiHandler, ImageUtils, ResultProcessor
 import torch
+import os
+import glob
+from PIL import Image, ImageOps
 
 # Initialize DeepGenConfig implicitly via ApiHandler usages or if needed
 # deepgen_config = DeepGenConfig()
@@ -89,9 +92,9 @@ class ImageNode:
 
         # Handle image and mask if provided
         if image is not None:
-            image_url = ImageUtils.upload_image(image)
-            if image_url:
-                arguments["image_url"] = image_url
+            image_urls = ImageUtils.prepare_images(image)
+            if image_urls:
+                arguments["image_urls"] = image_urls
         
         if mask_image is not None:
             mask_url = ImageUtils.upload_image(mask_image)
@@ -105,12 +108,96 @@ class ImageNode:
             return ApiHandler.handle_image_generation_error("ImageNode", e)
 
 
+    @staticmethod
+    def handle_image_generation_error(model_name, error):
+        """Handle image generation errors consistently."""
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error generating image with {model_name}: {str(error)}")
+        print(f"Traceback: {error_details}")
+        return ResultProcessor.create_blank_image()
+
+
+class LoadImageDirectoryNode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "directory": ("STRING", {"default": ""}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE", "INT")
+    RETURN_NAMES = ("IMAGE", "count")
+    FUNCTION = "load_images"
+    CATEGORY = "DeepGen/Image"
+
+    def load_images(self, directory):
+        import folder_paths
+        
+        if not directory:
+            print("LoadImageDirectoryNode: Empty directory provided. Returning blank image.")
+            return (ResultProcessor.create_blank_image()[0], 0)
+            
+        # Try to resolve relative to input directory, otherwise treat as absolute
+        input_dir = folder_paths.get_input_directory()
+        if os.path.isabs(directory):
+            dir_path = directory
+        else:
+            dir_path = os.path.join(input_dir, directory)
+            
+        if not os.path.isdir(dir_path):
+            print(f"LoadImageDirectoryNode: Directory not found: {dir_path}")
+            return (ResultProcessor.create_blank_image()[0], 0)
+            
+        image_paths = []
+        for ext in ('*.png', '*.jpg', '*.jpeg', '*.webp', '*.bmp'):
+            image_paths.extend(glob.glob(os.path.join(dir_path, ext)))
+            image_paths.extend(glob.glob(os.path.join(dir_path, ext.upper())))
+            
+        if not image_paths:
+            print(f"LoadImageDirectoryNode: No standard images found in directory: {dir_path}")
+            return (ResultProcessor.create_blank_image()[0], 0)
+            
+        # Sort to ensure consistent order
+        image_paths.sort()
+        
+        tensors = []
+        target_size = None
+        
+        for p in image_paths:
+            try:
+                img = Image.open(p)
+                img = ImageOps.exif_transpose(img)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                    
+                # Resize all subsequent images to the first image's size to ensure they can be stacked
+                if target_size is None:
+                    target_size = img.size
+                elif img.size != target_size:
+                    img = img.resize(target_size, Image.Resampling.LANCZOS)
+                    
+                img_array = np.array(img).astype(np.float32) / 255.0
+                tensors.append(torch.from_numpy(img_array))
+            except Exception as e:
+                print(f"LoadImageDirectoryNode: Warning skipping {p}: {e}")
+                
+        if not tensors:
+            return (ResultProcessor.create_blank_image()[0], 0)
+            
+        batch_tensor = torch.stack(tensors)
+        return (batch_tensor, len(tensors))
+
+
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Image_deepgen": ImageNode,
+    "LoadImageDirectory_deepgen": LoadImageDirectoryNode,
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Image_deepgen": "Image (deepgen)",
+    "LoadImageDirectory_deepgen": "Load Image Directory (deepgen)",
 }
