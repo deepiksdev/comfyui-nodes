@@ -10,26 +10,32 @@ from PIL import Image, ImageOps
 class ImageNode:
     @classmethod
     def INPUT_TYPES(cls):
+        optional_inputs = {
+            "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+            "seed_value": ("INT", {"default": -1}),
+            "steps": ("INT", {"default": 4, "min": 1, "max": 40}),
+            "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1}),
+            "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
+            "enable_safety_checker": ("BOOLEAN", {"default": True}),
+            "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
+            "image": ("IMAGE",),
+            "mask_image": ("IMAGE",),
+            "alias_id": ("STRING", {"default": "flux_schnell"}),
+            "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
+            "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
+        }
+
+        # Add 15 additional image sockets natively
+        for i in range(1, 16):
+            optional_inputs[f"image_{i}"] = ("IMAGE",)
+
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "width": ("INT", {"default": 1024, "min": 256, "max": 4096, "step": 8}),
                 "height": ("INT", {"default": 768, "min": 256, "max": 4096, "step": 8}),
             },
-            "optional": {
-                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
-                "seed_value": ("INT", {"default": -1}),
-                "steps": ("INT", {"default": 4, "min": 1, "max": 40}),
-                "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1}),
-                "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-                "enable_safety_checker": ("BOOLEAN", {"default": True}),
-                "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
-                "image": ("IMAGE",),
-                "mask_image": ("IMAGE",),
-                "alias_id": ("STRING", {"default": "flux_schnell"}),
-                "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
-                "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
-            },
+            "optional": optional_inputs,
         }
 
     RETURN_TYPES = ("IMAGE",)
@@ -53,6 +59,7 @@ class ImageNode:
         alias_id="deepgen/flux/dev",
         loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
+        **kwargs
     ):
         arguments = {
             "prompt": prompt,
@@ -90,11 +97,23 @@ class ImageNode:
         if seed_value != -1:
             arguments["seed"] = seed_value
 
-        # Handle image and mask if provided
+        # Handle images if provided
+        images_to_process = []
         if image is not None:
-            image_urls = ImageUtils.prepare_images(image)
-            if image_urls:
-                arguments["image_urls"] = image_urls
+            images_to_process.append(image)
+
+        for k, v in kwargs.items():
+            if k.startswith('image_') and v is not None:
+                images_to_process.append(v)
+
+        all_image_urls = []
+        for img in images_to_process:
+            urls = ImageUtils.prepare_images(img)
+            if urls:
+                all_image_urls.extend(urls)
+
+        if all_image_urls:
+            arguments["image_urls"] = all_image_urls
         
         if mask_image is not None:
             mask_url = ImageUtils.upload_image(mask_image)
