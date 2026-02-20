@@ -99,11 +99,17 @@ class DeepGenConfig:
 
         # 2. Load the user config
         user_config = {}
+        self._config_error = None
         if os.path.exists(user_config_path):
             try:
+                import re
                 with open(user_config_path, "r") as f:
-                    user_config = json.load(f)
+                    content = f.read()
+                    # Strip out trailing commas to prevent annoying JSON syntax errors
+                    content = re.sub(r',\s*([\]}])', r'\1', content)
+                    user_config = json.loads(content)
             except Exception as e:
+                self._config_error = f"Malformed JSON in {user_config_path}: {e}"
                 print(f"Error reading config from {user_config_path}: {e}")
 
         try:
@@ -143,6 +149,25 @@ class DeepGenConfig:
     def get_base_url(self):
         """Get the DeepGen API base URL."""
         return self._base_url
+
+    @staticmethod
+    def check_key(key):
+        """Raise an informative error if the API key is not configured."""
+        # First check if there was a JSON parse error to warn the user about syntax
+        config_inst = DeepGenConfig()
+        if hasattr(config_inst, '_config_error') and config_inst._config_error:
+            raise ValueError(f"Syntax Error in config.json: {config_inst._config_error}")
+
+        if not key or key == "<your_deepgen_api_key_here>":
+            try:
+                import folder_paths
+                user_dir = os.path.join(folder_paths.base_path, "user", "deepgen")
+            except ImportError:
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                comfy_path = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+                user_dir = os.path.join(comfy_path, "user", "deepgen")
+            user_config_path = os.path.join(user_dir, "config.json")
+            raise ValueError(f"DEEPGEN_API_KEY is missing. Please add your API key to {user_config_path} and restart ComfyUI.")
 
 
 class ImageUtils:
@@ -234,9 +259,7 @@ class ImageUtils:
         try:
             config = DeepGenConfig()
             key = config.get_key()
-            if not key:
-                print("Cannot upload: API key missing")
-                return None
+            DeepGenConfig.check_key(key)
                 
             url = f"{config.get_base_url()}/upload" # Assumption: /upload endpoint
             
@@ -599,6 +622,8 @@ class DeepGenApiHandler:
         try:
             config = DeepGenConfig()
             key = config.get_key()
+            DeepGenConfig.check_key(key)
+            
             base_url = api_url if api_url else config.get_base_url()
             
             # Map arguments to DeepGen Gateway format
