@@ -22,3 +22,7 @@ ComfyUI is a powerful and modular stable diffusion GUI and backend. It allows yo
 ## Usage
 
 For more information on how to use ComfyUI, please refer to the official documentation.
+
+## AI Agent Rules
+
+- **Committing**: Do NOT make any Git commits unless explicitly requested by the user.
