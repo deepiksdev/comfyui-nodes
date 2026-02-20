@@ -7,30 +7,45 @@ deepgen_config = DeepGenConfig()
 class VLMNode:
     @classmethod
     def INPUT_TYPES(cls):
+        optional_inputs = {
+            "image": ("IMAGE",),
+            "system_prompt": ("STRING", {"default": "", "multiline": True}),
+            "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
+            "reasoning": ("BOOLEAN", {"default": False}),
+            "max_tokens": ("INT", {"default": 1024, "min": 0, "max": 100000}),
+            "attachments_urls": ("STRING", {"default": "", "multiline": True}),
+            "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
+        }
+        
+        # Add 15 additional image sockets natively
+        for i in range(1, 16):
+            optional_inputs[f"image_{i}"] = ("IMAGE",)
+
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "alias_id": ("STRING", {"default": "deepgen/openrouter/router/vision"}),
             },
-            "optional": {
-                "image": ("IMAGE",),
-                "system_prompt": ("STRING", {"default": "", "multiline": True}),
-                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
-                "reasoning": ("BOOLEAN", {"default": False}),
-                "max_tokens": ("INT", {"default": 1024, "min": 0, "max": 100000}),
-                "attachments_urls": ("STRING", {"default": "", "multiline": True}),
-                "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
-            },
+            "optional": optional_inputs,
         }
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/VLM"
 
-    def generate_text(self, prompt, alias_id, image=None, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None, endpoint="https://api.deepgen.app"):
+    def generate_text(self, prompt, alias_id, image=None, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None, endpoint="https://api.deepgen.app", **kwargs):
         try:
             image_urls = []
             attachments_files = []
+            
+            # Collect all explicitly named images and any dynamic ones from kwargs
+            images_to_process = []
+            if image is not None:
+                images_to_process.append(image)
+                
+            for k, v in kwargs.items():
+                if k.startswith('image_') and v is not None:
+                    images_to_process.append(v)
             
             # Handle list of attachments if provided via URL
             if attachments_urls:
@@ -39,19 +54,19 @@ class VLMNode:
                 elif isinstance(attachments_urls, str):
                     image_urls.extend([u.strip() for u in attachments_urls.split("\n") if u.strip()])
 
-            # Handle image tensor if provided - using direct attachments
-            if image is not None:
+            # Process all images collected
+            for img in images_to_process:
                 # Check if image is a batch (4D tensor) or single image (3D tensor)
-                if len(image.shape) == 4:
+                if len(img.shape) == 4:
                     # Batch of images
-                    for i in range(image.shape[0]):
-                        single_image = image[i:i+1]
-                        attach = ImageUtils.get_attachment_file(single_image, filename=f"image_{i}.png")
+                    for i in range(img.shape[0]):
+                        single_image = img[i:i+1]
+                        attach = ImageUtils.get_attachment_file(single_image, filename=f"image_{len(attachments_files)}.png")
                         if attach:
                             attachments_files.append(attach)
                 else:
                     # Single image
-                    attach = ImageUtils.get_attachment_file(image, filename="image.png")
+                    attach = ImageUtils.get_attachment_file(img, filename=f"image_{len(attachments_files)}.png")
                     if attach:
                         attachments_files.append(attach)
 
