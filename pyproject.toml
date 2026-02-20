@@ -3,13 +3,13 @@ name = "deepgen-api"
 description = "Custom nodes for using DeepGen API. Video generation, Image generation, Upscaling, LLMs and VLMs."
 version = "1.0.12"
 license = {file = "LICENSE"}
-dependencies = ["requests"]
+dependencies = ["requests", "opencv-python"]
 
 [project.urls]
-Repository = "https://github.com/deepgen-app/ComfyUI-DeepGen-API"
+Repository = "https://github.com/deepiksdev/comfyui-nodes"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = "deepgen"
+PublisherId = "deepiksdev"
 DisplayName = "ComfyUI-DeepGen-API"
 Icon = ""
