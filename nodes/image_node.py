@@ -118,86 +118,12 @@ class ImageNode:
         return ResultProcessor.create_blank_image()
 
 
-class LoadImageDirectoryNode:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "directory": ("STRING", {"default": ""}),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE", "INT")
-    RETURN_NAMES = ("IMAGE", "count")
-    FUNCTION = "load_images"
-    CATEGORY = "DeepGen/Image"
-
-    def load_images(self, directory):
-        import folder_paths
-        
-        if not directory:
-            print("LoadImageDirectoryNode: Empty directory provided. Returning blank image.")
-            return (ResultProcessor.create_blank_image()[0], 0)
-            
-        # Try to resolve relative to input directory, otherwise treat as absolute
-        input_dir = folder_paths.get_input_directory()
-        if os.path.isabs(directory):
-            dir_path = directory
-        else:
-            dir_path = os.path.join(input_dir, directory)
-            
-        if not os.path.isdir(dir_path):
-            print(f"LoadImageDirectoryNode: Directory not found: {dir_path}")
-            return (ResultProcessor.create_blank_image()[0], 0)
-            
-        image_paths = []
-        for ext in ('*.png', '*.jpg', '*.jpeg', '*.webp', '*.bmp'):
-            image_paths.extend(glob.glob(os.path.join(dir_path, ext)))
-            image_paths.extend(glob.glob(os.path.join(dir_path, ext.upper())))
-            
-        if not image_paths:
-            print(f"LoadImageDirectoryNode: No standard images found in directory: {dir_path}")
-            return (ResultProcessor.create_blank_image()[0], 0)
-            
-        # Sort to ensure consistent order
-        image_paths.sort()
-        
-        tensors = []
-        target_size = None
-        
-        for p in image_paths:
-            try:
-                img = Image.open(p)
-                img = ImageOps.exif_transpose(img)
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                    
-                # Resize all subsequent images to the first image's size to ensure they can be stacked
-                if target_size is None:
-                    target_size = img.size
-                elif img.size != target_size:
-                    img = img.resize(target_size, Image.Resampling.LANCZOS)
-                    
-                img_array = np.array(img).astype(np.float32) / 255.0
-                tensors.append(torch.from_numpy(img_array))
-            except Exception as e:
-                print(f"LoadImageDirectoryNode: Warning skipping {p}: {e}")
-                
-        if not tensors:
-            return (ResultProcessor.create_blank_image()[0], 0)
-            
-        batch_tensor = torch.stack(tensors)
-        return (batch_tensor, len(tensors))
-
-
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
     "Image_deepgen": ImageNode,
-    "LoadImageDirectory_deepgen": LoadImageDirectoryNode,
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Image_deepgen": "Image (deepgen)",
-    "LoadImageDirectory_deepgen": "Load Image Directory (deepgen)",
 }

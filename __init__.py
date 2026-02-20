@@ -8,10 +8,12 @@ node_list = [
     "vlm_node",
     "trainer_node",
     "upscaler_node",
+    "upload_multiple_images_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
+WEB_DIRECTORY = "./web"
 
 for module_name in node_list:
     imported_module = importlib.import_module(f".nodes.{module_name}", __name__)
@@ -23,4 +25,4 @@ for module_name in node_list:
     }
 
 
-__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
