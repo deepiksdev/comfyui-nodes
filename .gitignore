@@ -8,3 +8,4 @@ user/__manager/*
 user/default/comfy.settings.json
 .env
 *.pyc
+config.json

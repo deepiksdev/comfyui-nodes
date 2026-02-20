@@ -1,6 +1,7 @@
 import configparser
 import io
 import os
+import json
 import tempfile
 import asyncio
 import concurrent.futures
@@ -29,57 +30,108 @@ class DeepGenConfig:
         """Initialize configuration and API key."""
         current_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(current_dir)
-        config_path = os.path.join(parent_dir, "config.ini")
+        old_env_path = os.path.join(parent_dir, ".env")
+        old_config_path = os.path.join(parent_dir, "config.ini")
 
-        config = configparser.ConfigParser()
-        config.read(config_path)
+        # Determine user directory for the config
+        try:
+            import folder_paths
+            user_dir = os.path.join(folder_paths.base_path, "user", "deepgen")
+        except ImportError:
+            # Fallback if imported outside ComfyUI environment
+            comfy_path = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+            user_dir = os.path.join(comfy_path, "user", "deepgen")
 
-        # Try to load from .env file directly if it exists in parent directory
-        env_path = os.path.join(parent_dir, ".env")
-        if os.path.exists(env_path):
-            with open(env_path, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("DEEPGEN_API_KEY="):
-                        self._key = line.split("=", 1)[1]
-                        # Remove quotes if present
-                        if (self._key.startswith('"') and self._key.endswith('"')) or \
-                           (self._key.startswith("'") and self._key.endswith("'")):
-                            self._key = self._key[1:-1]
-                        os.environ["DEEPGEN_API_KEY"] = self._key
-                        print(f"DEEPGEN_API_KEY loaded from {env_path}")
-                    elif line.startswith("DEEPGEN_API_URL="):
-                        url = line.split("=", 1)[1]
-                         # Remove quotes if present
-                        if (url.startswith('"') and url.endswith('"')) or \
-                           (url.startswith("'") and url.endswith("'")):
-                            url = url[1:-1]
-                        os.environ["DEEPGEN_API_URL"] = url
-                        print(f"DEEPGEN_API_URL loaded from {env_path}: {url}")
+        if not os.path.exists(user_dir):
+            try:
+                os.makedirs(user_dir, exist_ok=True)
+            except Exception as e:
+                print(f"Warning: Could not create user directory at {user_dir}: {e}")
+
+        user_config_path = os.path.join(user_dir, "config.json")
+        default_config = {
+            "DEEPGEN_API_KEY": "<your_deepgen_api_key_here>",
+            "DEEPGEN_API_URL": "https://api.deepgen.app"
+        }
+
+        # 1. Provide a template if not exists
+        if not os.path.exists(user_config_path) and os.path.exists(user_dir):
+            # Try to migrate from old .env or config.ini if they exist
+            migrated = False
+            if os.path.exists(old_env_path):
+                try:
+                    with open(old_env_path, "r") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line.startswith("DEEPGEN_API_KEY="):
+                                key = line.split("=", 1)[1].strip("\"'")
+                                default_config["DEEPGEN_API_KEY"] = key
+                                migrated = True
+                            elif line.startswith("DEEPGEN_API_URL="):
+                                url = line.split("=", 1)[1].strip("\"'")
+                                default_config["DEEPGEN_API_URL"] = url
+                                migrated = True
+                except Exception as e:
+                    print(f"Warning: failed reading old .env: {e}")
+
+            if not migrated and os.path.exists(old_config_path):
+                try:
+                    config = configparser.ConfigParser()
+                    config.read(old_config_path)
+                    if "API" in config and "DEEPGEN_API_KEY" in config["API"]:
+                        key = config["API"]["DEEPGEN_API_KEY"]
+                        if key and key != "<your_deepgen_api_key_here>":
+                            default_config["DEEPGEN_API_KEY"] = key
+                            migrated = True
+                except Exception as e:
+                    print(f"Warning: failed reading old config.ini: {e}")
+
+            try:
+                with open(user_config_path, "w") as f:
+                    json.dump(default_config, f, indent=4)
+                print(f"\n[!] DeepGen Nodes: Created a config file at {user_config_path}")
+                if migrated:
+                    print(f"[!] Migrated old API keys into the new config file.")
+                else:
+                    print(f"[!] Please add your DEEPGEN_API_KEY to this file and restart ComfyUI.\n")
+            except Exception as e:
+                print(f"Warning: could not write config file at {user_config_path}: {e}")
+
+        # 2. Load the user config
+        user_config = {}
+        if os.path.exists(user_config_path):
+            try:
+                with open(user_config_path, "r") as f:
+                    user_config = json.load(f)
+            except Exception as e:
+                print(f"Error reading config from {user_config_path}: {e}")
 
         try:
-            if not self._key and os.environ.get("DEEPGEN_API_KEY") is not None:
-                print("DEEPGEN_API_KEY found in environment variables")
-                self._key = os.environ["DEEPGEN_API_KEY"]
-            
+            # 3. Apply configurations (Env overrides User Config)
+            self._key = os.environ.get("DEEPGEN_API_KEY")
             if not self._key:
-                # Fallback to checking config.ini just in case, though structure might differ
-                if "API" in config and "DEEPGEN_API_KEY" in config["API"]:
-                    self._key = config["API"]["DEEPGEN_API_KEY"]
-                    if self._key != "<your_deepgen_api_key_here>":
-                        print("DEEPGEN_API_KEY found in config.ini")
-                        os.environ["DEEPGEN_API_KEY"] = self._key
-                    else:
-                        self._key = None
+                key = user_config.get("DEEPGEN_API_KEY")
+                if key and key != "<your_deepgen_api_key_here>":
+                    self._key = key
+                    os.environ["DEEPGEN_API_KEY"] = self._key
+                    print(f"DEEPGEN_API_KEY loaded from {user_config_path}")
 
             if not self._key:
-                print("Error: DEEPGEN_API_KEY not found in .env, config.ini or environment variables")
+                print(f"Error: DEEPGEN_API_KEY not found in {user_config_path} or environment variables")
+                print(f"Please configure it at: {user_config_path}")
             elif self._key == "<your_deepgen_api_key_here>":
-                print("WARNING: You are using the default DeepGen API key placeholder!")
+                print(f"WARNING: You are using the default DEEPGEN_API_KEY placeholder in {user_config_path}!")
                 
             # Allow overriding base URL from env
-            if os.environ.get("DEEPGEN_API_URL"):
-                self._base_url = os.environ["DEEPGEN_API_URL"]
+            env_url = os.environ.get("DEEPGEN_API_URL")
+            if env_url:
+                self._base_url = env_url
+            else:
+                config_url = user_config.get("DEEPGEN_API_URL")
+                if config_url and config_url != "https://api.deepgen.app":
+                    self._base_url = config_url
+                    os.environ["DEEPGEN_API_URL"] = self._base_url
+                    print(f"DEEPGEN_API_URL loaded from {user_config_path}: {self._base_url}")
                 
         except Exception as e:
             print(f"Error initializing DeepGenConfig: {str(e)}")
