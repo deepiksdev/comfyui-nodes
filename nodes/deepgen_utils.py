@@ -694,6 +694,8 @@ class DeepGenApiHandler:
                     return DeepGenApiHandler._poll_result(result["request_id"], api_url=base_url)
                 return result
             else:
+                if response.status_code in [401, 403]:
+                    raise ValueError(f"DeepGen API Authentication Error ({response.status_code}). Please verify your Deepgen API Key in ComfyUI Settings.")
                 raise Exception(f"API Error {response.status_code}: {response.text}")
 
         except Exception as e:

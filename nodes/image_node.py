@@ -135,6 +135,8 @@ class ImageNode:
         try:
             result = ApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
             return ResultProcessor.process_image_result(result)
+        except ValueError as ve:
+            raise ve
         except Exception as e:
             print(f"Error generating image : {str(e)}")
             return ApiHandler.handle_image_generation_error("ImageNode", e)
