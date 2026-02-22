@@ -167,7 +167,43 @@ class DeepGenConfig:
                 comfy_path = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
                 user_dir = os.path.join(comfy_path, "user", "deepgen")
             user_config_path = os.path.join(user_dir, "config.json")
-            raise ValueError(f"DEEPGEN_API_KEY is missing. Please add your API key to {user_config_path} and restart ComfyUI.")
+            raise ValueError(f"DEEPGEN_API_KEY is missing. Please click the ComfyUI Settings gear icon and enter your Deepgen API Key to use the nodes.")
+
+    def set_key(self, api_key):
+        """Set the DeepGen API key and save it to config.json."""
+        self._key = api_key
+        os.environ["DEEPGEN_API_KEY"] = api_key
+        
+        try:
+            import folder_paths
+            user_dir = os.path.join(folder_paths.base_path, "user", "deepgen")
+        except ImportError:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            comfy_path = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+            user_dir = os.path.join(comfy_path, "user", "deepgen")
+
+        user_config_path = os.path.join(user_dir, "config.json")
+        
+        user_config = {}
+        if os.path.exists(user_config_path):
+            try:
+                with open(user_config_path, "r") as f:
+                    import re
+                    content = f.read()
+                    content = re.sub(r',\s*([\]}])', r'\1', content)
+                    user_config = json.loads(content)
+            except Exception:
+                pass
+                
+        user_config["DEEPGEN_API_KEY"] = api_key
+        
+        os.makedirs(user_dir, exist_ok=True)
+        try:
+            with open(user_config_path, "w") as f:
+                json.dump(user_config, f, indent=4)
+        except Exception as e:
+            print(f"Warning: could not write config file at {user_config_path}: {e}")
+
 
 
 class ImageUtils:
