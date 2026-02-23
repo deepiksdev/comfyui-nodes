@@ -709,8 +709,8 @@ class DeepGenApiHandler:
                 return result
             else:
                 if response.status_code in [401, 403, 500]:
-                    raise ValueError(f"DeepGen API Error ({response.status_code}). Please verify your Deepgen API Key in ComfyUI Settings. Server Response: {response.text}")
-                raise ValueError(f"API Error {response.status_code}: {response.text}")
+                    raise ValueError(f"DeepGen API Error ({response.status_code}). Please verify your Deepgen API Key in ComfyUI Settings.")
+                raise ValueError(f"API Error {response.status_code}. The server failed to process the request.")
 
         except ValueError:
             raise
