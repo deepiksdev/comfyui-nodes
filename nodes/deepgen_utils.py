@@ -708,13 +708,15 @@ class DeepGenApiHandler:
                     return DeepGenApiHandler._poll_result(result["request_id"], api_url=base_url)
                 return result
             else:
-                if response.status_code in [401, 403]:
-                    raise ValueError(f"DeepGen API Authentication Error ({response.status_code}). Please verify your Deepgen API Key in ComfyUI Settings.")
-                raise Exception(f"API Error {response.status_code}: {response.text}")
+                if response.status_code in [401, 403, 500]:
+                    raise ValueError(f"DeepGen API Error ({response.status_code}). Please verify your Deepgen API Key in ComfyUI Settings. Server Response: {response.text}")
+                raise ValueError(f"API Error {response.status_code}: {response.text}")
 
+        except ValueError:
+            raise
         except Exception as e:
             #rint(f"Error submitting to {endpoint}: {str(e)}")
-            raise e
+            raise ValueError(f"Failed to submit to DeepGen API: {str(e)}")
             
     @staticmethod
     def _poll_result(request_id, api_url=None):
@@ -733,7 +735,7 @@ class DeepGenApiHandler:
         while True:
             response = requests.get(url, headers=headers)
             if response.status_code != 200:
-                raise Exception(f"Polling failed: {response.text}")
+                raise ValueError(f"Polling failed ({response.status_code}): {response.text}")
             
             data = response.json()
             #rint(f"DeepGen Poll Response: {data}")
@@ -743,7 +745,7 @@ class DeepGenApiHandler:
             if status == "COMPLETED":
                 return data.get("result", data)
             elif status == "FAILED":
-                raise Exception(f"Job failed: {data.get('error')}")
+                raise ValueError(f"Job failed: {data.get('error')}")
             
             time.sleep(1)
 
