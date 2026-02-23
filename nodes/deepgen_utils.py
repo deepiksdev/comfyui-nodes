@@ -657,7 +657,10 @@ class DeepGenApiHandler:
         """Submit job to DeepGen API and get result."""
         try:
             config = DeepGenConfig()
+            print("CONFIG:", config)
             key = config.get_key()
+            print("KEY:", key)
+
             DeepGenConfig.check_key(key)
             
             base_url = api_url if api_url else config.get_base_url()
