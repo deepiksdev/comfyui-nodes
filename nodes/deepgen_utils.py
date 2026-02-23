@@ -176,7 +176,7 @@ class DeepGenConfig:
                 comfy_path = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
                 user_dir = os.path.join(comfy_path, "user", "deepgen")
             user_config_path = os.path.join(user_dir, "config.json")
-            raise ValueError(f"DEEPGEN_API_KEY is missing. Please click the ComfyUI Settings gear icon and enter your Deepgen API Key to use the nodes.")
+            raise ValueError(f"DEEPGEN_API_KEY is missing. Please click the ComfyUI Settings gear icon and enter your DeepGen API Key to use the nodes.")
 
     def set_key(self, api_key):
         """Set the DeepGen API key and save it to config.json."""
@@ -709,7 +709,7 @@ class DeepGenApiHandler:
                 return result
             else:
                 if response.status_code in [401, 403, 500]:
-                    raise ValueError(f"DeepGen API Error ({response.status_code}). Please verify your Deepgen API Key in ComfyUI Settings.")
+                    raise ValueError(f"DeepGen API Error ({response.status_code}). Please verify your DeepGen API Key in ComfyUI Settings.")
                 raise ValueError(f"API Error {response.status_code}. The server failed to process the request.")
 
         except ValueError:

@@ -14,13 +14,13 @@ app.registerExtension({
                 currentApiKey = data.api_key || "";
             }
         } catch (e) {
-            console.error("Failed to fetch Deepgen API Key", e);
+            console.error("Failed to fetch DeepGen API Key", e);
         }
 
         // Add setting to the ComfyUI Settings menu
         app.ui.settings.addSetting({
-            id: "deepgen.api_key",
-            name: "Deepgen API Key",
+            id: "DeepGen.api_key",
+            name: "DeepGen API Key",
             type: "text",
             defaultValue: currentApiKey,
             async onChange(newVal) {
@@ -33,12 +33,12 @@ app.registerExtension({
                     });
                     if (resp.status === 200) {
                         currentApiKey = newVal;
-                        console.log("Deepgen API Key saved successfully.");
+                        console.log("DeepGen API Key saved successfully.");
                     } else {
-                        console.error("Failed to save Deepgen API Key");
+                        console.error("Failed to save DeepGen API Key");
                     }
                 } catch (e) {
-                    console.error("Error saving Deepgen API Key", e);
+                    console.error("Error saving DeepGen API Key", e);
                 }
             }
         });
@@ -46,7 +46,7 @@ app.registerExtension({
         // Show warning if key is missing or is the default placeholder
         if (!currentApiKey || currentApiKey === "<your_deepgen_api_key_here>") {
             setTimeout(() => {
-                alert("DeepGen Nodes: API Key is missing!\n\nPlease click the ComfyUI Settings gear icon and enter your Deepgen API Key to use the nodes.");
+                alert("DeepGen Nodes: API Key is missing!\n\nPlease click the ComfyUI Settings gear icon and enter your DeepGen API Key to use the nodes.");
             }, 1000);
         }
     }
