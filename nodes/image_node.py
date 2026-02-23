@@ -86,6 +86,7 @@ class ImageNode:
                     try:
                         scale = float(parts[1].strip())
                     except ValueError:
+                        pass
                         #rint(f"Warning: Invalid scale for LoRA {path}, defaulting to 1.0")
                 
                 loras_list.append({"path": path, "scale": scale})

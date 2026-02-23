@@ -46,6 +46,7 @@ class DeepGenConfig:
             try:
                 os.makedirs(user_dir, exist_ok=True)
             except Exception as e:
+                pass
                 #rint(f"Warning: Could not create user directory at {user_dir}: {e}")
 
         user_config_path = os.path.join(user_dir, "config.json")
@@ -72,6 +73,7 @@ class DeepGenConfig:
                                 default_config["DEEPGEN_API_URL"] = url
                                 migrated = True
                 except Exception as e:
+                    pass
                     #rint(f"Warning: failed reading old .env: {e}")
 
             if not migrated and os.path.exists(old_config_path):
@@ -84,6 +86,7 @@ class DeepGenConfig:
                             default_config["DEEPGEN_API_KEY"] = key
                             migrated = True
                 except Exception as e:
+                    pass
                     #rint(f"Warning: failed reading old config.ini: {e}")
 
             try:
@@ -91,10 +94,13 @@ class DeepGenConfig:
                     json.dump(default_config, f, indent=4)
                 #rint(f"\n[!] DeepGen Nodes: Created a config file at {user_config_path}")
                 if migrated:
+                    pass
                     #rint(f"[!] Migrated old API keys into the new config file.")
                 else:
+                    pass
                     #rint(f"[!] Please add your DEEPGEN_API_KEY to this file and restart ComfyUI.\n")
             except Exception as e:
+                pass
                 #rint(f"Warning: could not write config file at {user_config_path}: {e}")
 
         # 2. Load the user config
@@ -123,9 +129,11 @@ class DeepGenConfig:
                     #rint(f"DEEPGEN_API_KEY loaded from {user_config_path}")
 
             if not self._key:
+                pass
                 #rint(f"Error: DEEPGEN_API_KEY not found in {user_config_path} or environment variables")
                 #rint(f"Please configure it at: {user_config_path}")
             elif self._key == "<your_deepgen_api_key_here>":
+                pass
                 #rint(f"WARNING: You are using the default DEEPGEN_API_KEY placeholder in {user_config_path}!")
                 
             # Allow overriding base URL from env
@@ -140,6 +148,7 @@ class DeepGenConfig:
                     #rint(f"DEEPGEN_API_URL loaded from {user_config_path}: {self._base_url}")
                 
         except Exception as e:
+            pass
             #rint(f"Error initializing DeepGenConfig: {str(e)}")
 
     def get_key(self):
@@ -202,6 +211,7 @@ class DeepGenConfig:
             with open(user_config_path, "w") as f:
                 json.dump(user_config, f, indent=4)
         except Exception as e:
+            pass
             #rint(f"Warning: could not write config file at {user_config_path}: {e}")
 
 
@@ -415,6 +425,7 @@ class ResultProcessor:
                         img_array = np.array(img).astype(np.float32) / 255.0
                         images.append(img_array)
                 except Exception as e:
+                    pass
                     #rint(f"Failed to download/process image from {img_url}: {str(e)}")
 
             if not images:
