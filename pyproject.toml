@@ -1,7 +1,7 @@
 [project]
 name = "deepgen-api"
 description = "Custom nodes for using DeepGen API. Video generation, Image generation, Upscaling, LLMs and VLMs."
-version = "1.0.16"
+version = "1.0.17"
 license = {file = "LICENSE"}
 dependencies = ["requests", "opencv-python"]
 
