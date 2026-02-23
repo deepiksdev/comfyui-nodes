@@ -1,6 +1,8 @@
 import importlib
 import importlib.util
 
+from .nodes import api_routes
+
 node_list = [
     "image_node",
     "video_node",

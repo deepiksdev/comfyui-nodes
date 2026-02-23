@@ -46,7 +46,8 @@ class DeepGenConfig:
             try:
                 os.makedirs(user_dir, exist_ok=True)
             except Exception as e:
-                print(f"Warning: Could not create user directory at {user_dir}: {e}")
+                pass
+                #rint(f"Warning: Could not create user directory at {user_dir}: {e}")
 
         user_config_path = os.path.join(user_dir, "config.json")
         default_config = {
@@ -72,7 +73,8 @@ class DeepGenConfig:
                                 default_config["DEEPGEN_API_URL"] = url
                                 migrated = True
                 except Exception as e:
-                    print(f"Warning: failed reading old .env: {e}")
+                    pass
+                    #rint(f"Warning: failed reading old .env: {e}")
 
             if not migrated and os.path.exists(old_config_path):
                 try:
@@ -84,18 +86,22 @@ class DeepGenConfig:
                             default_config["DEEPGEN_API_KEY"] = key
                             migrated = True
                 except Exception as e:
-                    print(f"Warning: failed reading old config.ini: {e}")
+                    pass
+                    #rint(f"Warning: failed reading old config.ini: {e}")
 
             try:
                 with open(user_config_path, "w") as f:
                     json.dump(default_config, f, indent=4)
-                print(f"\n[!] DeepGen Nodes: Created a config file at {user_config_path}")
+                #rint(f"\n[!] DeepGen Nodes: Created a config file at {user_config_path}")
                 if migrated:
-                    print(f"[!] Migrated old API keys into the new config file.")
+                    pass
+                    #rint(f"[!] Migrated old API keys into the new config file.")
                 else:
-                    print(f"[!] Please add your DEEPGEN_API_KEY to this file and restart ComfyUI.\n")
+                    pass
+                    #rint(f"[!] Please add your DEEPGEN_API_KEY to this file and restart ComfyUI.\n")
             except Exception as e:
-                print(f"Warning: could not write config file at {user_config_path}: {e}")
+                pass
+                #rint(f"Warning: could not write config file at {user_config_path}: {e}")
 
         # 2. Load the user config
         user_config = {}
@@ -110,7 +116,7 @@ class DeepGenConfig:
                     user_config = json.loads(content)
             except Exception as e:
                 self._config_error = f"Malformed JSON in {user_config_path}: {e}"
-                print(f"Error reading config from {user_config_path}: {e}")
+                #rint(f"Error reading config from {user_config_path}: {e}")
 
         try:
             # 3. Apply configurations (Env overrides User Config)
@@ -120,13 +126,15 @@ class DeepGenConfig:
                 if key and key != "<your_deepgen_api_key_here>":
                     self._key = key
                     os.environ["DEEPGEN_API_KEY"] = self._key
-                    print(f"DEEPGEN_API_KEY loaded from {user_config_path}")
+                    #rint(f"DEEPGEN_API_KEY loaded from {user_config_path}")
 
             if not self._key:
-                print(f"Error: DEEPGEN_API_KEY not found in {user_config_path} or environment variables")
-                print(f"Please configure it at: {user_config_path}")
+                pass
+                #rint(f"Error: DEEPGEN_API_KEY not found in {user_config_path} or environment variables")
+                #rint(f"Please configure it at: {user_config_path}")
             elif self._key == "<your_deepgen_api_key_here>":
-                print(f"WARNING: You are using the default DEEPGEN_API_KEY placeholder in {user_config_path}!")
+                pass
+                #rint(f"WARNING: You are using the default DEEPGEN_API_KEY placeholder in {user_config_path}!")
                 
             # Allow overriding base URL from env
             env_url = os.environ.get("DEEPGEN_API_URL")
@@ -137,10 +145,11 @@ class DeepGenConfig:
                 if config_url and config_url != "https://api.deepgen.app":
                     self._base_url = config_url
                     os.environ["DEEPGEN_API_URL"] = self._base_url
-                    print(f"DEEPGEN_API_URL loaded from {user_config_path}: {self._base_url}")
+                    #rint(f"DEEPGEN_API_URL loaded from {user_config_path}: {self._base_url}")
                 
         except Exception as e:
-            print(f"Error initializing DeepGenConfig: {str(e)}")
+            pass
+            #rint(f"Error initializing DeepGenConfig: {str(e)}")
 
     def get_key(self):
         """Get the DeepGen API key."""
@@ -167,7 +176,44 @@ class DeepGenConfig:
                 comfy_path = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
                 user_dir = os.path.join(comfy_path, "user", "deepgen")
             user_config_path = os.path.join(user_dir, "config.json")
-            raise ValueError(f"DEEPGEN_API_KEY is missing. Please add your API key to {user_config_path} and restart ComfyUI.")
+            raise ValueError(f"DEEPGEN_API_KEY is missing. Please click the ComfyUI Settings gear icon and enter your DeepGen API Key to use the nodes.")
+
+    def set_key(self, api_key):
+        """Set the DeepGen API key and save it to config.json."""
+        self._key = api_key
+        os.environ["DEEPGEN_API_KEY"] = api_key
+        
+        try:
+            import folder_paths
+            user_dir = os.path.join(folder_paths.base_path, "user", "deepgen")
+        except ImportError:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            comfy_path = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+            user_dir = os.path.join(comfy_path, "user", "deepgen")
+
+        user_config_path = os.path.join(user_dir, "config.json")
+        
+        user_config = {}
+        if os.path.exists(user_config_path):
+            try:
+                with open(user_config_path, "r") as f:
+                    import re
+                    content = f.read()
+                    content = re.sub(r',\s*([\]}])', r'\1', content)
+                    user_config = json.loads(content)
+            except Exception:
+                pass
+                
+        user_config["DEEPGEN_API_KEY"] = api_key
+        
+        os.makedirs(user_dir, exist_ok=True)
+        try:
+            with open(user_config_path, "w") as f:
+                json.dump(user_config, f, indent=4)
+        except Exception as e:
+            pass
+            #rint(f"Warning: could not write config file at {user_config_path}: {e}")
+
 
 
 class ImageUtils:
@@ -200,7 +246,7 @@ class ImageUtils:
             # Convert to PIL Image
             return Image.fromarray(image_np)
         except Exception as e:
-            print(f"Error converting tensor to PIL: {str(e)}")
+            #rint(f"Error converting tensor to PIL: {str(e)}")
             return None
 
     @staticmethod
@@ -218,7 +264,7 @@ class ImageUtils:
 
             return ImageUtils.upload_file(temp_file_path)
         except Exception as e:
-            print(f"Error uploading image: {str(e)}")
+            #rint(f"Error uploading image: {str(e)}")
             return None
         finally:
             # Clean up the temporary file
@@ -250,7 +296,7 @@ class ImageUtils:
                 "attachment_file_name": filename
             }
         except Exception as e:
-            print(f"Error creating attachment file: {str(e)}")
+            #rint(f"Error creating attachment file: {str(e)}")
             return None
 
     @staticmethod
@@ -273,13 +319,13 @@ class ImageUtils:
                 if "url" in data:
                     return data["url"]
                 # Adjust based on actual response structure if known
-                print(f"Upload response: {data}")
+                #rint(f"Upload response: {data}")
                 return data.get("file_url") or data.get("url")
             else:
-                print(f"Upload failed with status {response.status_code}: {response.text}")
+                #rint(f"Upload failed with status {response.status_code}: {response.text}")
                 return None
         except Exception as e:
-            print(f"Error uploading file: {str(e)}")
+            #rint(f"Error uploading file: {str(e)}")
             return None
         
     @staticmethod
@@ -379,10 +425,11 @@ class ResultProcessor:
                         img_array = np.array(img).astype(np.float32) / 255.0
                         images.append(img_array)
                 except Exception as e:
-                    print(f"Failed to download/process image from {img_url}: {str(e)}")
+                    pass
+                    #rint(f"Failed to download/process image from {img_url}: {str(e)}")
 
             if not images:
-                print(f"No images found in result: {result}")
+                #rint(f"No images found in result: {result}")
                 return ResultProcessor.create_blank_image()
 
             # Stack the images along a new first dimension
@@ -393,7 +440,7 @@ class ResultProcessor:
 
             return (img_tensor,)
         except Exception as e:
-            print(f"Error processing image result: {str(e)}")
+            #rint(f"Error processing image result: {str(e)}")
             return ResultProcessor.create_blank_image()
 
     @staticmethod
@@ -445,7 +492,7 @@ class ResultProcessor:
             
             return (output or "", reasoning or "")
         except Exception as e:
-            print(f"Error processing text result: {str(e)}")
+            #rint(f"Error processing text result: {str(e)}")
             return (f"Error: {str(e)}", "")
 
     @staticmethod
@@ -479,7 +526,7 @@ class ResultProcessor:
 
             return (f"Error: No file URL found in result: {result}",)
         except Exception as e:
-            print(f"Error processing file result: {str(e)}")
+            #rint(f"Error processing file result: {str(e)}")
             return (f"Error: {str(e)}",)
 
     @staticmethod
@@ -529,13 +576,13 @@ class ResultProcessor:
         try:
             video_urls = ResultProcessor._extract_video_urls(result)
             if not video_urls:
-                print(f"No videos found in result: {result}")
+                #rint(f"No videos found in result: {result}")
                 return ("Error: No video found in result",)
             
             # Return as tuple of strings (first one if only one expected by most nodes)
             return (video_urls[0],)
         except Exception as e:
-            print(f"Error processing video result: {str(e)}")
+            #rint(f"Error processing video result: {str(e)}")
             return (f"Error: Processing video result failed: {str(e)}",)
 
     @staticmethod
@@ -621,7 +668,10 @@ class DeepGenApiHandler:
         """Submit job to DeepGen API and get result."""
         try:
             config = DeepGenConfig()
+            print("CONFIG:", config)
             key = config.get_key()
+            print("KEY:", key)
+
             DeepGenConfig.check_key(key)
             
             base_url = api_url if api_url else config.get_base_url()
@@ -641,28 +691,32 @@ class DeepGenApiHandler:
                 "Content-Type": "application/json"
             }
             
-            print(f"Submitting to {url}")
-            print(f"Mapped Arguments: {mapped_arguments}")
+            #rint(f"Submitting to {url}")
+            #rint(f"Mapped Arguments: {mapped_arguments}")
             response = requests.post(url, json=mapped_arguments, headers=headers)
             
             if response.status_code == 200:
                 result = response.json()
-                print(f"DeepGen API Response: {result}")
+                #rint(f"DeepGen API Response: {result}")
                 return result
             elif response.status_code == 201: # Accepted/Async?
                 # Handle polling if needed, but assuming sync for simple endpoints for now
                 # Or if it returns a request_id to poll
                 result = response.json()
-                print(f"DeepGen API Async Response: {result}")
+                #rint(f"DeepGen API Async Response: {result}")
                 if "request_id" in result:
                     return DeepGenApiHandler._poll_result(result["request_id"], api_url=base_url)
                 return result
             else:
-                raise Exception(f"API Error {response.status_code}: {response.text}")
+                if response.status_code in [401, 403, 500]:
+                    raise ValueError(f"DeepGen API Error ({response.status_code}). Please verify your DeepGen API Key in ComfyUI Settings.")
+                raise ValueError(f"API Error {response.status_code}. The server failed to process the request.")
 
+        except ValueError:
+            raise
         except Exception as e:
-            print(f"Error submitting to {endpoint}: {str(e)}")
-            raise e
+            #rint(f"Error submitting to {endpoint}: {str(e)}")
+            raise ValueError(f"Failed to submit to DeepGen API: {str(e)}")
             
     @staticmethod
     def _poll_result(request_id, api_url=None):
@@ -681,17 +735,17 @@ class DeepGenApiHandler:
         while True:
             response = requests.get(url, headers=headers)
             if response.status_code != 200:
-                raise Exception(f"Polling failed: {response.text}")
+                raise ValueError(f"Polling failed ({response.status_code}): {response.text}")
             
             data = response.json()
-            print(f"DeepGen Poll Response: {data}")
+            #rint(f"DeepGen Poll Response: {data}")
             
             status = data.get("status")
             
             if status == "COMPLETED":
                 return data.get("result", data)
             elif status == "FAILED":
-                raise Exception(f"Job failed: {data.get('error')}")
+                raise ValueError(f"Job failed: {data.get('error')}")
             
             time.sleep(1)
 
@@ -714,13 +768,13 @@ class DeepGenApiHandler:
                     results.append(future.result())
             return results
         except Exception as e:
-            print(f"Error in submit_multiple_and_get_results: {str(e)}")
+            #rint(f"Error in submit_multiple_and_get_results: {str(e)}")
             raise e
 
     @staticmethod
     def handle_video_generation_error(model_name, error):
         """Handle video generation errors consistently."""
-        print(f"Error generating video with {model_name}: {str(error)}")
+        #rint(f"Error generating video with {model_name}: {str(error)}")
         return ("Error: Unable to generate video.",)
 
     @staticmethod
@@ -728,12 +782,12 @@ class DeepGenApiHandler:
         """Handle image generation errors consistently."""
         import traceback
         error_details = traceback.format_exc()
-        print(f"Error generating image with {model_name}: {str(error)}")
-        print(f"Traceback: {error_details}")
+        #rint(f"Error generating image with {model_name}: {str(error)}")
+        #rint(f"Traceback: {error_details}")
         return ResultProcessor.create_blank_image()
 
     @staticmethod
     def handle_text_generation_error(model_name, error):
         """Handle text generation errors consistently."""
-        print(f"Error generating text with {model_name}: {str(error)}")
+        #rint(f"Error generating text with {model_name}: {str(error)}")
         return ("Error: Unable to generate text.",)

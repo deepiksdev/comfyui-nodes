@@ -86,6 +86,8 @@ class VideoNode:
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 return ResultProcessor.process_video_result(result)
 
+        except ValueError as ve:
+            raise ve
         except Exception as e:
             return DeepGenApiHandler.handle_video_generation_error(alias_id, str(e))
 

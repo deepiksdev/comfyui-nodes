@@ -40,7 +40,7 @@ def create_zip_from_images(images):
             # Use ImageUtils.upload_file instead of FalConfig client
             return ImageUtils.upload_file(temp_zip.name)
     except Exception as e:
-        print(f"Failed to create zip file: {str(e)}")
+        #rint(f"Failed to create zip file: {str(e)}")
         return None
 
 

@@ -86,7 +86,8 @@ class ImageNode:
                     try:
                         scale = float(parts[1].strip())
                     except ValueError:
-                        print(f"Warning: Invalid scale for LoRA {path}, defaulting to 1.0")
+                        pass
+                        #rint(f"Warning: Invalid scale for LoRA {path}, defaulting to 1.0")
                 
                 loras_list.append({"path": path, "scale": scale})
 
@@ -135,8 +136,10 @@ class ImageNode:
         try:
             result = ApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
             return ResultProcessor.process_image_result(result)
+        except ValueError as ve:
+            raise ve
         except Exception as e:
-            print(f"Error generating image : {str(e)}")
+            #rint(f"Error generating image : {str(e)}")
             return ApiHandler.handle_image_generation_error("ImageNode", e)
 
 
@@ -145,8 +148,8 @@ class ImageNode:
         """Handle image generation errors consistently."""
         import traceback
         error_details = traceback.format_exc()
-        print(f"Error generating image with {model_name}: {str(error)}")
-        print(f"Traceback: {error_details}")
+        #rint(f"Error generating image with {model_name}: {str(error)}")
+        #rint(f"Traceback: {error_details}")
         return ResultProcessor.create_blank_image()
 
 
