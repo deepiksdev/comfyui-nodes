@@ -43,6 +43,8 @@ class LLMNode:
             result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
 
             return ResultProcessor.process_text_result(result)
+        except ValueError as ve:
+            raise ve
         except Exception as e:
             error_result = DeepGenApiHandler.handle_text_generation_error(alias_id, str(e))
             return (error_result[0], "")
