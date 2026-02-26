@@ -697,6 +697,8 @@ class DeepGenApiHandler:
             
             if response.status_code == 200:
                 result = response.json()
+                if isinstance(result, dict) and result.get("error"):
+                    raise ValueError(f"DeepGen API Error: {result['error']}")
                 #rint(f"DeepGen API Response: {result}")
                 return result
             elif response.status_code == 201: # Accepted/Async?
@@ -706,8 +708,20 @@ class DeepGenApiHandler:
                 #rint(f"DeepGen API Async Response: {result}")
                 if "request_id" in result:
                     return DeepGenApiHandler._poll_result(result["request_id"], api_url=base_url)
+                if isinstance(result, dict) and result.get("error"):
+                    raise ValueError(f"DeepGen API Error: {result['error']}")
                 return result
             else:
+                error_msg = None
+                try:
+                    err_data = response.json()
+                    if isinstance(err_data, dict) and err_data.get("error"):
+                        error_msg = err_data["error"]
+                except Exception:
+                    pass
+                if error_msg:
+                    raise ValueError(f"DeepGen API Error: {error_msg}")
+                    
                 if response.status_code in [401, 403, 500]:
                     raise ValueError(f"DeepGen API Error ({response.status_code}). Please verify your DeepGen API Key in ComfyUI Settings.")
                 raise ValueError(f"API Error {response.status_code}. The server failed to process the request.")
@@ -743,7 +757,10 @@ class DeepGenApiHandler:
             status = data.get("status")
             
             if status == "COMPLETED":
-                return data.get("result", data)
+                result = data.get("result", data)
+                if isinstance(result, dict) and result.get("error"):
+                    raise ValueError(f"DeepGen API Error: {result['error']}")
+                return result
             elif status == "FAILED":
                 raise ValueError(f"Job failed: {data.get('error')}")
             

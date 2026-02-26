@@ -117,6 +117,8 @@ class TrainerNode:
             result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
             return ResultProcessor.process_file_result(result)
 
+        except ValueError as ve:
+            raise ve
         except Exception as e:
             return (f"Error: {str(e)}",)
 

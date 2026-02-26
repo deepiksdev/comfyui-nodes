@@ -99,6 +99,8 @@ class UpscalerNode:
                 processed = ResultProcessor.process_image_result(result)
                 return (processed[0], "")
 
+        except ValueError as ve:
+            raise ve
         except Exception as e:
             return (ResultProcessor.create_blank_image()[0], str(e))
 

@@ -2,6 +2,7 @@ from .deepgen_utils import DeepGenApiHandler as ApiHandler, ImageUtils, ResultPr
 import torch
 import os
 import glob
+import csv
 from PIL import Image, ImageOps
 
 # Initialize DeepGenConfig implicitly via ApiHandler usages or if needed
@@ -10,28 +11,39 @@ from PIL import Image, ImageOps
 class ImageNode:
     @classmethod
     def INPUT_TYPES(cls):
+        # Load models from CSV
+        cls.models_list = []
+        cls.models_map = {} # Map from name to value (alias_id)
+        
+        csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models.csv")
+        try:
+            with open(csv_path, mode='r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    cls.models_list.append(row["name"])
+                    cls.models_map[row["name"]] = row["value"]
+        except Exception as e:
+            print(f"DeepGen: Failed to load models.csv: {e}")
+            cls.models_list = ["Flux Schnell"]
+            cls.models_map = {"Flux Schnell": "flux_schnell"}
+
         optional_inputs = {
-            "negative_prompt": ("STRING", {"default": "", "multiline": True}),
             "seed_value": ("INT", {"default": -1}),
             "steps": ("INT", {"default": 4, "min": 1, "max": 40}),
             "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1}),
             "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
             "enable_safety_checker": ("BOOLEAN", {"default": True}),
             "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
-            "image": ("IMAGE",),
-            "mask_image": ("IMAGE",),
-            "alias_id": ("STRING", {"default": "flux_schnell"}),
+            "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
             "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
         }
 
-        # Add 15 additional image sockets natively
-        for i in range(1, 16):
-            optional_inputs[f"image_{i}"] = ("IMAGE",)
 
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
                 "width": ("INT", {"default": 1024, "min": 256, "max": 4096, "step": 8}),
                 "height": ("INT", {"default": 768, "min": 256, "max": 4096, "step": 8}),
             },
@@ -54,9 +66,7 @@ class ImageNode:
         num_images=1,
         enable_safety_checker=True,
         output_format="png",
-        image=None,
-        mask_image=None,
-        alias_id="deepgen/flux/dev",
+        model="Flux Schnell",
         loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
         **kwargs
@@ -72,6 +82,10 @@ class ImageNode:
             "enable_safety_checker": enable_safety_checker,
             "output_format": output_format,
         }
+
+        # Lookup alias_id from the selected model name
+        alias_id = self.models_map.get(model, "flux_schnell")
+
 
         if loras:
             # Parse loras string into a list of dictionaries
@@ -100,8 +114,6 @@ class ImageNode:
 
         # Handle images if provided
         images_to_process = []
-        if image is not None:
-            images_to_process.append(image)
 
         for k, v in kwargs.items():
             if k.startswith('image_') and v is not None:
@@ -122,16 +134,6 @@ class ImageNode:
 
         if attachments_files:
             arguments["attachments_files"] = attachments_files
-        
-        if mask_image is not None:
-            # Note: Mask may also need to be sent differently if /upload is unsupported.
-            # Currently fallback to old behavior, but ideally would be attachments_files too
-            # or integrated alongside other attachments.
-            mask_attach = ImageUtils.get_attachment_file(mask_image, filename="mask.png")
-            if mask_attach:
-                if "attachments_files" not in arguments:
-                    arguments["attachments_files"] = []
-                arguments["attachments_files"].append(mask_attach)
 
         try:
             result = ApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
