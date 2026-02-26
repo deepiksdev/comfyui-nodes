@@ -28,7 +28,6 @@ class ImageNode:
             cls.models_map = {"Flux Schnell": "flux_schnell"}
 
         optional_inputs = {
-            "mask_image": ("IMAGE",),
             "seed_value": ("INT", {"default": -1}),
             "steps": ("INT", {"default": 4, "min": 1, "max": 40}),
             "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1}),
@@ -61,7 +60,6 @@ class ImageNode:
         width,
         height,
         negative_prompt="",
-        mask_image=None,
         seed_value=-1,
         steps=28, # Fixed argument name to match parameter
         guidance_scale=3.5,
@@ -136,16 +134,6 @@ class ImageNode:
 
         if attachments_files:
             arguments["attachments_files"] = attachments_files
-        
-        if mask_image is not None:
-            # Note: Mask may also need to be sent differently if /upload is unsupported.
-            # Currently fallback to old behavior, but ideally would be attachments_files too
-            # or integrated alongside other attachments.
-            mask_attach = ImageUtils.get_attachment_file(mask_image, filename="mask.png")
-            if mask_attach:
-                if "attachments_files" not in arguments:
-                    arguments["attachments_files"] = []
-                arguments["attachments_files"].append(mask_attach)
 
         try:
             result = ApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
