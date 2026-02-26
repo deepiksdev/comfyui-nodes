@@ -2,6 +2,7 @@ from .deepgen_utils import DeepGenApiHandler as ApiHandler, ImageUtils, ResultPr
 import torch
 import os
 import glob
+import csv
 from PIL import Image, ImageOps
 
 # Initialize DeepGenConfig implicitly via ApiHandler usages or if needed
@@ -10,6 +11,22 @@ from PIL import Image, ImageOps
 class ImageNode:
     @classmethod
     def INPUT_TYPES(cls):
+        # Load models from CSV
+        cls.models_list = []
+        cls.models_map = {} # Map from name to value (alias_id)
+        
+        csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models.csv")
+        try:
+            with open(csv_path, mode='r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    cls.models_list.append(row["name"])
+                    cls.models_map[row["name"]] = row["value"]
+        except Exception as e:
+            print(f"DeepGen: Failed to load models.csv: {e}")
+            cls.models_list = ["Flux Schnell"]
+            cls.models_map = {"Flux Schnell": "flux_schnell"}
+
         optional_inputs = {
             "negative_prompt": ("STRING", {"default": "", "multiline": True}),
             "seed_value": ("INT", {"default": -1}),
@@ -20,14 +37,11 @@ class ImageNode:
             "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
             "image": ("IMAGE",),
             "mask_image": ("IMAGE",),
-            "alias_id": ("STRING", {"default": "flux_schnell"}),
+            "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
             "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
         }
 
-        # Add 15 additional image sockets natively
-        for i in range(1, 16):
-            optional_inputs[f"image_{i}"] = ("IMAGE",)
 
         return {
             "required": {
@@ -56,7 +70,7 @@ class ImageNode:
         output_format="png",
         image=None,
         mask_image=None,
-        alias_id="deepgen/flux/dev",
+        model="Flux Schnell",
         loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
         **kwargs
@@ -72,6 +86,10 @@ class ImageNode:
             "enable_safety_checker": enable_safety_checker,
             "output_format": output_format,
         }
+
+        # Lookup alias_id from the selected model name
+        alias_id = self.models_map.get(model, "flux_schnell")
+
 
         if loras:
             # Parse loras string into a list of dictionaries
