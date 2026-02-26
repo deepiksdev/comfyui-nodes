@@ -28,11 +28,12 @@ class VideoNode:
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
                 "alias_id": ("STRING", {"default": "deepgen/minimax/video-01-live/image-to-video"}),
                 "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
+                "output_prefix": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
-    RETURN_NAMES = ("video_url", "agent_alias", "total_credits_used",)
+    RETURN_NAMES = ("video_url", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate_video"
     CATEGORY = "DeepGen/VideoGeneration"
 
@@ -48,6 +49,7 @@ class VideoNode:
         variations=1,
         alias_id="deepgen/minimax/video-01-live/image-to-video",
         endpoint="https://api.deepgen.app",
+        output_prefix="",
     ):
         try:
             arguments = {
@@ -86,9 +88,10 @@ class VideoNode:
                     obj = r[0] if isinstance(r, list) and len(r) > 0 else r
                     return obj if isinstance(obj, dict) else getattr(obj, '__dict__', {}) or {}
                 
-                agent_alias_out = get_dict(results[0]).get("agent_alias", "") if results else ""
+                agent_alias = get_dict(results[0]).get("agent_alias", "") if results else ""
+                prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
                 credits_out = sum(float(get_dict(r).get("total_credits_used", 0.0)) for r in results)
-                return (video_urls[0], agent_alias_out, credits_out)
+                return (video_urls[0], prefixed_model, credits_out)
             else:
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 
@@ -97,9 +100,10 @@ class VideoNode:
                     res_obj = getattr(res_obj, '__dict__', {}) or {}
                 
                 video_url = ResultProcessor.process_video_result(result)[0]
-                agent_alias_out = res_obj.get("agent_alias", "")
+                agent_alias = res_obj.get("agent_alias", "")
+                prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
                 credits_out = float(res_obj.get("total_credits_used", 0.0))
-                return (video_url, agent_alias_out, credits_out)
+                return (video_url, prefixed_model, credits_out)
 
         except ValueError as ve:
             raise ve

@@ -62,11 +62,12 @@ class TrainerNode:
                 "auto_scale_input": ("BOOLEAN", {"default": True}),
                 "alias_id": ("STRING", {"default": "deepgen/flux-lora-fast-training"}),
                 "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
+                "output_prefix": ("STRING", {"default": ""}),
             },
         }
 
     RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
-    RETURN_NAMES = ("lora_file_url", "agent_alias", "total_credits_used",)
+    RETURN_NAMES = ("lora_file_url", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "train"
     CATEGORY = "DeepGen/Training"
 
@@ -83,6 +84,7 @@ class TrainerNode:
         auto_scale_input=True,
         alias_id="deepgen/flux-lora-fast-training",
         endpoint="https://api.deepgen.app",
+        output_prefix="",
     ):
         try:
             # Handle training data
@@ -121,9 +123,10 @@ class TrainerNode:
                 res_obj = getattr(res_obj, '__dict__', {}) or {}
 
             lora_url = ResultProcessor.process_file_result(result)[0]
-            agent_alias_out = res_obj.get("agent_alias", "")
+            agent_alias = res_obj.get("agent_alias", "")
+            prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
             credits_out = float(res_obj.get("total_credits_used", 0.0))
-            return (lora_url, agent_alias_out, credits_out)
+            return (lora_url, prefixed_model, credits_out)
 
         except ValueError as ve:
             raise ve

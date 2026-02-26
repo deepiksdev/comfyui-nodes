@@ -37,6 +37,7 @@ class ImageNode:
             "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
             "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
+            "output_prefix": ("STRING", {"default": ""}),
         }
 
 
@@ -51,7 +52,7 @@ class ImageNode:
         }
 
     RETURN_TYPES = ("IMAGE", "STRING", "FLOAT",)
-    RETURN_NAMES = ("IMAGE", "agent_alias", "total_credits_used",)
+    RETURN_NAMES = ("IMAGE", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate_image"
     CATEGORY = "DeepGen/Image"
 
@@ -70,6 +71,7 @@ class ImageNode:
         model="Flux Schnell",
         loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
+        output_prefix="",
         **kwargs
     ):
         arguments = {
@@ -145,9 +147,10 @@ class ImageNode:
                 res_obj = getattr(res_obj, '__dict__', {}) or {}
             
             img_tensor = ResultProcessor.process_image_result(result)[0]
-            agent_alias_out = res_obj.get("agent_alias", "")
+            agent_alias = res_obj.get("agent_alias", "")
+            prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
             credits_out = float(res_obj.get("total_credits_used", 0.0))
-            return (img_tensor, agent_alias_out, credits_out)
+            return (img_tensor, prefixed_model, credits_out)
         except ValueError as ve:
             raise ve
         except Exception as e:

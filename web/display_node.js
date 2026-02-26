@@ -2,9 +2,9 @@ import { app } from "../../scripts/app.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
 
 app.registerExtension({
-    name: "DeepGen.DisplayNode",
+    name: "DeepGen.DisplayFloatNode",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "Display_deepgen") {
+        if (nodeData.name === "DisplayFloat_deepgen") {
             const onExecuted = nodeType.prototype.onExecuted;
             nodeType.prototype.onExecuted = function (message) {
                 onExecuted?.apply(this, arguments);

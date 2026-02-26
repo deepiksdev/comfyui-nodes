@@ -1,36 +1,28 @@
-class DisplayNode:
+class DisplayFloatNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
-            "required": {},
-            "optional": {
-                "text": ("STRING", {"forceInput": True}),
+            "required": {
                 "float_val": ("FLOAT", {"forceInput": True}),
-                "int_val": ("INT", {"forceInput": True}),
             }
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text",)
     OUTPUT_NODE = True
-    FUNCTION = "display_text"
+    FUNCTION = "display_float"
     CATEGORY = "DeepGen/Display"
 
-    def display_text(self, text=None, float_val=None, int_val=None, **kwargs):
-        vals = []
-        if text is not None: vals.append(str(text))
-        if float_val is not None: vals.append(str(float_val))
-        if int_val is not None: vals.append(str(int_val))
-        
-        final_text = " | ".join(vals) if vals else ""
-        return {"ui": {"text": [final_text]}, "result": (final_text,)}
+    def display_float(self, float_val):
+        text_val = str(float_val)
+        return {"ui": {"text": [text_val]}, "result": (text_val,)}
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "Display_deepgen": DisplayNode,
+    "DisplayFloat_deepgen": DisplayFloatNode,
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Display_deepgen": "Display (deepgen)",
+    "DisplayFloat_deepgen": "Display Float (deepgen)",
 }
