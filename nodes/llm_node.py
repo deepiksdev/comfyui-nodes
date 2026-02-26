@@ -21,8 +21,8 @@ class LLMNode:
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING",)
-    RETURN_NAMES = ("output", "reasoning",)
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "FLOAT",)
+    RETURN_NAMES = ("output", "reasoning", "agent_alias", "total_credits_used",)
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/LLM"
 
@@ -42,12 +42,15 @@ class LLMNode:
 
             result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
 
-            return ResultProcessor.process_text_result(result)
+            text_result = ResultProcessor.process_text_result(result)
+            agent_alias_out = result.get("agent_alias", "")
+            credits_out = float(result.get("total_credits_used", 0.0))
+            return (text_result[0], text_result[1], agent_alias_out, credits_out)
         except ValueError as ve:
             raise ve
         except Exception as e:
             error_result = DeepGenApiHandler.handle_text_generation_error(alias_id, str(e))
-            return (error_result[0], "")
+            return (error_result[0], "", "", 0.0)
 
 
 # Node class mappings

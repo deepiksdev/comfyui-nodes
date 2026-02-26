@@ -31,8 +31,8 @@ class VideoNode:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("video_url",)
+    RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
+    RETURN_NAMES = ("video_url", "agent_alias", "total_credits_used",)
     FUNCTION = "generate_video"
     CATEGORY = "DeepGen/VideoGeneration"
 
@@ -81,15 +81,21 @@ class VideoNode:
                 results = DeepGenApiHandler.submit_multiple_and_get_results(alias_id, arguments, variations, api_url=endpoint)
                 video_urls = [ResultProcessor.process_video_result(r)[0] for r in results]
                 # Returning first one as primary, though we could return a list if we changed RETURN_TYPES
-                return (video_urls[0],)
+                agent_alias_out = results[0].get("agent_alias", "") if results else ""
+                credits_out = sum(float(r.get("total_credits_used", 0.0)) for r in results)
+                return (video_urls[0], agent_alias_out, credits_out)
             else:
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
-                return ResultProcessor.process_video_result(result)
+                video_url = ResultProcessor.process_video_result(result)[0]
+                agent_alias_out = result.get("agent_alias", "")
+                credits_out = float(result.get("total_credits_used", 0.0))
+                return (video_url, agent_alias_out, credits_out)
 
         except ValueError as ve:
             raise ve
         except Exception as e:
-            return DeepGenApiHandler.handle_video_generation_error(alias_id, str(e))
+            error_msg = DeepGenApiHandler.handle_video_generation_error(alias_id, str(e))[0]
+            return (error_msg, "", 0.0)
 
 
 # Node class mappings

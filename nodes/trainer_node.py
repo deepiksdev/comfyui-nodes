@@ -65,8 +65,8 @@ class TrainerNode:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("lora_file_url",)
+    RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
+    RETURN_NAMES = ("lora_file_url", "agent_alias", "total_credits_used",)
     FUNCTION = "train"
     CATEGORY = "DeepGen/Training"
 
@@ -91,7 +91,7 @@ class TrainerNode:
                 data_url = create_zip_from_images(images)
             
             if not data_url:
-                return ("Error: No training data provided",)
+                return ("Error: No training data provided", "", 0.0)
 
             # Prepare arguments
             arguments = {
@@ -115,12 +115,15 @@ class TrainerNode:
 
             # Submit training job
             result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
-            return ResultProcessor.process_file_result(result)
+            lora_url = ResultProcessor.process_file_result(result)[0]
+            agent_alias_out = result.get("agent_alias", "")
+            credits_out = float(result.get("total_credits_used", 0.0))
+            return (lora_url, agent_alias_out, credits_out)
 
         except ValueError as ve:
             raise ve
         except Exception as e:
-            return (f"Error: {str(e)}",)
+            return (f"Error: {str(e)}", "", 0.0)
 
 
 # Node class mappings

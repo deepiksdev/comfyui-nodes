@@ -28,8 +28,8 @@ class UpscalerNode:
             },
         }
 
-    RETURN_TYPES = ("IMAGE", "STRING",)
-    RETURN_NAMES = ("image", "video_url",)
+    RETURN_TYPES = ("IMAGE", "STRING", "STRING", "FLOAT",)
+    RETURN_NAMES = ("image", "video_url", "agent_alias", "total_credits_used",)
     FUNCTION = "upscale"
     CATEGORY = "DeepGen/Upscaling"
 
@@ -68,7 +68,7 @@ class UpscalerNode:
                     video_url = ImageUtils.upload_file(video.get_stream_source())
                 
                 if not video_url:
-                    return (None, "Error: No video provided for upscaling")
+                    return (None, "Error: No video provided for upscaling", "", 0.0)
                 
                 arguments["video_url"] = video_url
                 # Add other video specific arguments if any (like from topas or bria)
@@ -76,14 +76,16 @@ class UpscalerNode:
                 
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 video_url_res = result.get("video", {}).get("url") or result.get("url")
-                return (None, video_url_res)
+                agent_alias_out = result.get("agent_alias", "")
+                credits_out = float(result.get("total_credits_used", 0.0))
+                return (None, video_url_res, agent_alias_out, credits_out)
             else:
                 if image is None:
-                    return (ResultProcessor.create_blank_image()[0], "Error: No image provided")
+                    return (ResultProcessor.create_blank_image()[0], "Error: No image provided", "", 0.0)
                 
                 image_url = ImageUtils.upload_image(image)
                 if not image_url:
-                    return (ResultProcessor.create_blank_image()[0], "Error: Failed to upload image")
+                    return (ResultProcessor.create_blank_image()[0], "Error: Failed to upload image", "", 0.0)
                 
                 arguments.update({
                     "image_url": image_url,
@@ -97,12 +99,14 @@ class UpscalerNode:
                 
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 processed = ResultProcessor.process_image_result(result)
-                return (processed[0], "")
+                agent_alias_out = result.get("agent_alias", "")
+                credits_out = float(result.get("total_credits_used", 0.0))
+                return (processed[0], "", agent_alias_out, credits_out)
 
         except ValueError as ve:
             raise ve
         except Exception as e:
-            return (ResultProcessor.create_blank_image()[0], str(e))
+            return (ResultProcessor.create_blank_image()[0], str(e), "", 0.0)
 
 
 # Node class mappings

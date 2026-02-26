@@ -50,7 +50,8 @@ class ImageNode:
             "optional": optional_inputs,
         }
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = ("IMAGE", "STRING", "FLOAT",)
+    RETURN_NAMES = ("image", "agent_alias", "total_credits_used",)
     FUNCTION = "generate_image"
     CATEGORY = "DeepGen/Image"
 
@@ -137,12 +138,16 @@ class ImageNode:
 
         try:
             result = ApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
-            return ResultProcessor.process_image_result(result)
+            img_tensor = ResultProcessor.process_image_result(result)[0]
+            agent_alias_out = result.get("agent_alias", "")
+            credits_out = float(result.get("total_credits_used", 0.0))
+            return (img_tensor, agent_alias_out, credits_out)
         except ValueError as ve:
             raise ve
         except Exception as e:
             #rint(f"Error generating image : {str(e)}")
-            return ApiHandler.handle_image_generation_error("ImageNode", e)
+            blank_img = ApiHandler.handle_image_generation_error("ImageNode", e)[0]
+            return (blank_img, "", 0.0)
 
 
     @staticmethod
