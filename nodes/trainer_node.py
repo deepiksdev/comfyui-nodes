@@ -62,11 +62,12 @@ class TrainerNode:
                 "auto_scale_input": ("BOOLEAN", {"default": True}),
                 "alias_id": ("STRING", {"default": "deepgen/flux-lora-fast-training"}),
                 "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
+                "output_prefix": ("STRING", {"default": ""}),
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("lora_file_url",)
+    RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
+    RETURN_NAMES = ("lora_file_url", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "train"
     CATEGORY = "DeepGen/Training"
 
@@ -83,6 +84,7 @@ class TrainerNode:
         auto_scale_input=True,
         alias_id="deepgen/flux-lora-fast-training",
         endpoint="https://api.deepgen.app",
+        output_prefix="",
     ):
         try:
             # Handle training data
@@ -91,7 +93,7 @@ class TrainerNode:
                 data_url = create_zip_from_images(images)
             
             if not data_url:
-                return ("Error: No training data provided",)
+                return ("Error: No training data provided", "", 0.0)
 
             # Prepare arguments
             arguments = {
@@ -115,12 +117,21 @@ class TrainerNode:
 
             # Submit training job
             result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
-            return ResultProcessor.process_file_result(result)
+            
+            res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+            if not isinstance(res_obj, dict):
+                res_obj = getattr(res_obj, '__dict__', {}) or {}
+
+            lora_url = ResultProcessor.process_file_result(result)[0]
+            agent_alias = res_obj.get("agent_alias", "")
+            prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
+            credits_out = float(res_obj.get("total_credits_used", 0.0))
+            return (lora_url, prefixed_model, credits_out)
 
         except ValueError as ve:
             raise ve
         except Exception as e:
-            return (f"Error: {str(e)}",)
+            return (f"Error: {str(e)}", "", 0.0)
 
 
 # Node class mappings

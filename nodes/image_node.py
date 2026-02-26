@@ -37,6 +37,7 @@ class ImageNode:
             "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
             "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
+            "output_prefix": ("STRING", {"default": ""}),
         }
 
 
@@ -50,7 +51,8 @@ class ImageNode:
             "optional": optional_inputs,
         }
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = ("IMAGE", "STRING", "FLOAT",)
+    RETURN_NAMES = ("IMAGE", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate_image"
     CATEGORY = "DeepGen/Image"
 
@@ -69,6 +71,7 @@ class ImageNode:
         model="Flux Schnell",
         loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
+        output_prefix="",
         **kwargs
     ):
         arguments = {
@@ -137,12 +140,23 @@ class ImageNode:
 
         try:
             result = ApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
-            return ResultProcessor.process_image_result(result)
+            # The API returns a list [WebResponse(...)] or a dict depending on endpoint.
+            # We better extract properties safely:
+            res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+            if not isinstance(res_obj, dict):
+                res_obj = getattr(res_obj, '__dict__', {}) or {}
+            
+            img_tensor = ResultProcessor.process_image_result(result)[0]
+            agent_alias = res_obj.get("agent_alias", "")
+            prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
+            credits_out = float(res_obj.get("total_credits_used", 0.0))
+            return (img_tensor, prefixed_model, credits_out)
         except ValueError as ve:
             raise ve
         except Exception as e:
             #rint(f"Error generating image : {str(e)}")
-            return ApiHandler.handle_image_generation_error("ImageNode", e)
+            blank_img = ApiHandler.handle_image_generation_error("ImageNode", e)[0]
+            return (blank_img, "", 0.0)
 
 
     @staticmethod

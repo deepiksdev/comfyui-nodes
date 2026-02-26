@@ -15,6 +15,7 @@ class VLMNode:
             "max_tokens": ("INT", {"default": 1024, "min": 0, "max": 100000}),
             "attachments_urls": ("STRING", {"default": "", "multiline": True}),
             "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
+            "output_prefix": ("STRING", {"default": ""}),
         }
         
         # Add 15 additional image sockets natively
@@ -29,11 +30,12 @@ class VLMNode:
             "optional": optional_inputs,
         }
 
-    RETURN_TYPES = ("STRING",)
+    RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
+    RETURN_NAMES = ("text", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/VLM"
 
-    def generate_text(self, prompt, alias_id, image=None, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None, endpoint="https://api.deepgen.app", **kwargs):
+    def generate_text(self, prompt, alias_id, image=None, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None, endpoint="https://api.deepgen.app", output_prefix="", **kwargs):
         try:
             image_urls = []
             attachments_files = []
@@ -85,12 +87,21 @@ class VLMNode:
                 arguments["max_tokens"] = max_tokens
 
             result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
+
+            res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+            if not isinstance(res_obj, dict):
+                res_obj = getattr(res_obj, '__dict__', {}) or {}
+
             text_result = ResultProcessor.process_text_result(result)
-            return (text_result[0],)
+            agent_alias = res_obj.get("agent_alias", "")
+            prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
+            credits_out = float(res_obj.get("total_credits_used", 0.0))
+            return (text_result[0], prefixed_model, credits_out)
         except ValueError as ve:
             raise ve
         except Exception as e:
-            return DeepGenApiHandler.handle_text_generation_error(alias_id, str(e))
+            error_msg = DeepGenApiHandler.handle_text_generation_error(alias_id, str(e))[0]
+            return (error_msg, "", 0.0)
 
 
 # Node class mappings
