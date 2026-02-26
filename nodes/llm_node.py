@@ -41,10 +41,14 @@ class LLMNode:
                 arguments["max_tokens"] = max_tokens
 
             result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
+            
+            res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+            if not isinstance(res_obj, dict):
+                res_obj = getattr(res_obj, '__dict__', {}) or {}
 
             text_result = ResultProcessor.process_text_result(result)
-            agent_alias_out = result.get("agent_alias", "")
-            credits_out = float(result.get("total_credits_used", 0.0))
+            agent_alias_out = res_obj.get("agent_alias", "")
+            credits_out = float(res_obj.get("total_credits_used", 0.0))
             return (text_result[0], text_result[1], agent_alias_out, credits_out)
         except ValueError as ve:
             raise ve

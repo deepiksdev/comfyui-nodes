@@ -29,7 +29,7 @@ class UpscalerNode:
         }
 
     RETURN_TYPES = ("IMAGE", "STRING", "STRING", "FLOAT",)
-    RETURN_NAMES = ("image", "video_url", "agent_alias", "total_credits_used",)
+    RETURN_NAMES = ("IMAGE", "video_url", "agent_alias", "total_credits_used",)
     FUNCTION = "upscale"
     CATEGORY = "DeepGen/Upscaling"
 
@@ -75,9 +75,13 @@ class UpscalerNode:
                 # For now keeping it generic
                 
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
-                video_url_res = result.get("video", {}).get("url") or result.get("url")
-                agent_alias_out = result.get("agent_alias", "")
-                credits_out = float(result.get("total_credits_used", 0.0))
+                res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+                if not isinstance(res_obj, dict):
+                    res_obj = getattr(res_obj, '__dict__', {}) or {}
+
+                video_url_res = res_obj.get("video", {}).get("url") or res_obj.get("url")
+                agent_alias_out = res_obj.get("agent_alias", "")
+                credits_out = float(res_obj.get("total_credits_used", 0.0))
                 return (None, video_url_res, agent_alias_out, credits_out)
             else:
                 if image is None:
@@ -98,9 +102,13 @@ class UpscalerNode:
                 })
                 
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
+                res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+                if not isinstance(res_obj, dict):
+                    res_obj = getattr(res_obj, '__dict__', {}) or {}
+
                 processed = ResultProcessor.process_image_result(result)
-                agent_alias_out = result.get("agent_alias", "")
-                credits_out = float(result.get("total_credits_used", 0.0))
+                agent_alias_out = res_obj.get("agent_alias", "")
+                credits_out = float(res_obj.get("total_credits_used", 0.0))
                 return (processed[0], "", agent_alias_out, credits_out)
 
         except ValueError as ve:

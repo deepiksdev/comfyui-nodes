@@ -81,14 +81,24 @@ class VideoNode:
                 results = DeepGenApiHandler.submit_multiple_and_get_results(alias_id, arguments, variations, api_url=endpoint)
                 video_urls = [ResultProcessor.process_video_result(r)[0] for r in results]
                 # Returning first one as primary, though we could return a list if we changed RETURN_TYPES
-                agent_alias_out = results[0].get("agent_alias", "") if results else ""
-                credits_out = sum(float(r.get("total_credits_used", 0.0)) for r in results)
+                
+                def get_dict(r):
+                    obj = r[0] if isinstance(r, list) and len(r) > 0 else r
+                    return obj if isinstance(obj, dict) else getattr(obj, '__dict__', {}) or {}
+                
+                agent_alias_out = get_dict(results[0]).get("agent_alias", "") if results else ""
+                credits_out = sum(float(get_dict(r).get("total_credits_used", 0.0)) for r in results)
                 return (video_urls[0], agent_alias_out, credits_out)
             else:
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
+                
+                res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+                if not isinstance(res_obj, dict):
+                    res_obj = getattr(res_obj, '__dict__', {}) or {}
+                
                 video_url = ResultProcessor.process_video_result(result)[0]
-                agent_alias_out = result.get("agent_alias", "")
-                credits_out = float(result.get("total_credits_used", 0.0))
+                agent_alias_out = res_obj.get("agent_alias", "")
+                credits_out = float(res_obj.get("total_credits_used", 0.0))
                 return (video_url, agent_alias_out, credits_out)
 
         except ValueError as ve:
