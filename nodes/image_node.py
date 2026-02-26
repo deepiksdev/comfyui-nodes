@@ -28,7 +28,6 @@ class ImageNode:
             cls.models_map = {"Flux Schnell": "flux_schnell"}
 
         optional_inputs = {
-            "negative_prompt": ("STRING", {"default": "", "multiline": True}),
             "mask_image": ("IMAGE",),
             "seed_value": ("INT", {"default": -1}),
             "steps": ("INT", {"default": 4, "min": 1, "max": 40}),
@@ -45,6 +44,7 @@ class ImageNode:
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
+                "negative_prompt": ("STRING", {"default": "", "multiline": True}),
                 "width": ("INT", {"default": 1024, "min": 256, "max": 4096, "step": 8}),
                 "height": ("INT", {"default": 768, "min": 256, "max": 4096, "step": 8}),
             },
