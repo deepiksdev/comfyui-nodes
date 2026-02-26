@@ -29,14 +29,13 @@ class ImageNode:
 
         optional_inputs = {
             "negative_prompt": ("STRING", {"default": "", "multiline": True}),
+            "mask_image": ("IMAGE",),
             "seed_value": ("INT", {"default": -1}),
             "steps": ("INT", {"default": 4, "min": 1, "max": 40}),
             "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1}),
             "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
             "enable_safety_checker": ("BOOLEAN", {"default": True}),
             "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
-            "image": ("IMAGE",),
-            "mask_image": ("IMAGE",),
             "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
             "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
@@ -62,14 +61,13 @@ class ImageNode:
         width,
         height,
         negative_prompt="",
+        mask_image=None,
         seed_value=-1,
         steps=28, # Fixed argument name to match parameter
         guidance_scale=3.5,
         num_images=1,
         enable_safety_checker=True,
         output_format="png",
-        image=None,
-        mask_image=None,
         model="Flux Schnell",
         loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
@@ -118,8 +116,6 @@ class ImageNode:
 
         # Handle images if provided
         images_to_process = []
-        if image is not None:
-            images_to_process.append(image)
 
         for k, v in kwargs.items():
             if k.startswith('image_') and v is not None:
