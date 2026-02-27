@@ -29,16 +29,21 @@ async def get_deepgen_models(request):
     csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models.csv")
     try:
         with open(csv_path, mode='r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
+            reader = csv.reader(f)
             for row in reader:
+                if len(row) < 6:
+                    continue
                 try:
-                    num_images = int(row.get("nb_of_images", 1))
+                    num_images = int(row[5])
                 except ValueError:
                     num_images = 1
                     
                 models_info.append({
-                    "name": row["name"],
-                    "value": row["value"],
+                    "value": row[0],
+                    "name": row[1],
+                    "aspect_ratios": [x.strip() for x in row[2].split(",")] if row[2].strip() else [],
+                    "resolutions": [x.strip() for x in row[3].split(",")] if row[3].strip() else [],
+                    "pixel_sizes": [x.strip() for x in row[4].split(",")] if row[4].strip() else [],
                     "nb_of_images": num_images
                 })
         return web.json_response({"models": models_info})

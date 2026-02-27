@@ -16,6 +16,44 @@ async function fetchModelsConfig() {
     }
 }
 
+// Helper to dynamically hide/show and update options of a combobox widget
+function manageDynamicChoiceWidget(node, widgetName, optionsList) {
+    if (!node.widgets) return;
+    if (!node._hiddenWidgets) node._hiddenWidgets = {};
+
+    let widget = node.widgets.find(w => w.name === widgetName);
+
+    // If it's a converted widget, it's typically an input socket now, so we skip modifying it visually
+    if (widget && widget.type === "converted-widget") return;
+
+    if (optionsList && optionsList.length > 0) {
+        // Show and update
+        if (!widget) {
+            widget = node._hiddenWidgets[widgetName];
+            if (widget) {
+                // Re-add hidden widget
+                node.widgets.push(widget);
+                delete node._hiddenWidgets[widgetName];
+            }
+        }
+        if (widget) {
+            widget.options.values = optionsList;
+            if (!optionsList.includes(widget.value)) {
+                widget.value = optionsList[0];
+            }
+        }
+    } else {
+        // Hide
+        if (widget) {
+            const idx = node.widgets.indexOf(widget);
+            if (idx !== -1) {
+                node.widgets.splice(idx, 1);
+                node._hiddenWidgets[widgetName] = widget;
+            }
+        }
+    }
+}
+
 app.registerExtension({
     name: "DeepGen.DynamicImageSockets",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
@@ -55,6 +93,11 @@ app.registerExtension({
                     const modelConfig = configs.find(c => c.name === selectedModelName);
                     const targetImages = modelConfig ? modelConfig.nb_of_images : 1;
 
+                    // Handle dynamic choice widgets (aspect_ratio, resolution, pixel_size)
+                    manageDynamicChoiceWidget(node, "aspect_ratio", modelConfig ? modelConfig.aspect_ratios : []);
+                    manageDynamicChoiceWidget(node, "resolution", modelConfig ? modelConfig.resolutions : []);
+                    manageDynamicChoiceWidget(node, "pixel_size", modelConfig ? modelConfig.pixel_sizes : []);
+
                     if (!node.inputs) return;
 
                     // 1. Remove any image_X sockets that are beyond the target amount
@@ -81,6 +124,9 @@ app.registerExtension({
                     }
 
                     // Force a UI redraw
+                    if (node.computeSize) {
+                        node.setSize(node.computeSize());
+                    }
                     if (app.graph) {
                         app.graph.setDirtyCanvas(true, true);
                     }

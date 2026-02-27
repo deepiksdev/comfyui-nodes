@@ -18,10 +18,11 @@ class ImageNode:
         csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models.csv")
         try:
             with open(csv_path, mode='r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
+                reader = csv.reader(f)
                 for row in reader:
-                    cls.models_list.append(row["name"])
-                    cls.models_map[row["name"]] = row["value"]
+                    if len(row) >= 2:
+                        cls.models_list.append(row[1])
+                        cls.models_map[row[1]] = row[0]
         except Exception as e:
             print(f"DeepGen: Failed to load models.csv: {e}")
             cls.models_list = ["Flux Schnell"]
@@ -38,6 +39,9 @@ class ImageNode:
             "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
             "output_prefix": ("STRING", {"default": ""}),
+            "aspect_ratio": (["Auto"], {"default": "Auto"}),
+            "resolution": ([""], {"default": ""}),
+            "pixel_size": ([""], {"default": ""}),
         }
 
 
@@ -45,8 +49,6 @@ class ImageNode:
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
-                "width": ("INT", {"default": 1024, "min": 256, "max": 4096, "step": 8}),
-                "height": ("INT", {"default": 768, "min": 256, "max": 4096, "step": 8}),
             },
             "optional": optional_inputs,
         }
@@ -59,8 +61,6 @@ class ImageNode:
     def generate_image(
         self,
         prompt,
-        width,
-        height,
         negative_prompt="",
         seed_value=-1,
         steps=28, # Fixed argument name to match parameter
@@ -72,19 +72,27 @@ class ImageNode:
         loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
         output_prefix="",
+        aspect_ratio=None,
+        resolution=None,
+        pixel_size=None,
         **kwargs
     ):
         arguments = {
             "prompt": prompt,
             "negative_prompt": negative_prompt,
-            "width": width,
-            "height": height,
             "steps": steps,
             "guidance_scale": guidance_scale,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker,
             "output_format": output_format,
         }
+
+        if aspect_ratio is not None and aspect_ratio != "":
+            arguments["aspect_ratio"] = aspect_ratio
+        if resolution is not None and resolution != "":
+            arguments["resolution"] = resolution
+        if pixel_size is not None and pixel_size != "":
+            arguments["pixel_size"] = pixel_size
 
         # Lookup alias_id from the selected model name
         alias_id = self.models_map.get(model, "flux_schnell")
