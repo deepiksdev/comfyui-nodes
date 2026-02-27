@@ -1,4 +1,1 @@
-value,name,nb_of_images
-flux_schnell,Flux Schnell,1
-deepgen/flux/dev,Flux Dev,2
-gpt-image-1,GPT Image,3
+"gemini-3-pro-image","Nano Banana Pro (Gemini 3 Pro Image)","Auto,1:1,9:16,16:9,3:4,4:3,3:2,2:3,5:4,4:5,21:9,4:1,1:4,8:1,1:8","1K,2K,4K","","14""gpt-image-1.5","GPT Image 1.5","","","1536x1024,1024x1536,1024x1024","10""seedream-v5-lite-edit","Seedream 5.0 Fast Lite","","","512x512,640x480,768x512,800x600,1024x576,1024x768,1024x1024,1080x720,1080x1080,1080x1350,1280x720,1280x800,1280x1024,1440x900,1500x1000,1536x2048,1600x900,1600x1200,1920x1080,1920x1200,2048x1080,2048x1536,2048x2048,2160x1440,2560x1440,2560x1600,3000x2000,3072x1728,3072x2304,3072x3072","10""grok-imagine-image","Grok Imagine Image","Auto,1:1,3:4,4:3,9:16,16:9,2:3,3:2,9:19.5,19.5:9,9:20,20:9,1:2,2:1","1k,2k","","3""grok-imagine-image-pro","Grok Imagine Image Pro","Auto,1:1,3:4,4:3,9:16,16:9,2:3,3:2,9:19.5,19.5:9,9:20,20:9,1:2,2:1","1k,2k","","3""gemini-3.1-flash-image","Nano Banana 2 (Gemini 3.1 Flash Image)","Auto,1:1,9:16,16:9,3:4,4:3,3:2,2:3,5:4,4:5,21:9,4:1,1:4,8:1,1:8","512,1K,2K,4K","","14"
