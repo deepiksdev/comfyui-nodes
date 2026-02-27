@@ -58,6 +58,11 @@ class ImageNode:
     FUNCTION = "generate_image"
     CATEGORY = "DeepGen/Image"
 
+    @classmethod
+    def VALIDATE_INPUTS(cls, **kwargs):
+        """Bypass standard ComfyUI validation for dynamic combo boxes"""
+        return True
+
     def generate_image(
         self,
         prompt,
