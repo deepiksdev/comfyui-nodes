@@ -92,11 +92,11 @@ class ImageNode:
             "output_format": output_format,
         }
 
-        if aspect_ratio is not None and aspect_ratio != "":
+        if aspect_ratio is not None and aspect_ratio not in ("", "Auto"):
             arguments["aspect_ratio"] = aspect_ratio
-        if resolution is not None and resolution != "":
+        if resolution is not None and resolution not in ("", "Auto"):
             arguments["resolution"] = resolution
-        if pixel_size is not None and pixel_size != "":
+        if pixel_size is not None and pixel_size not in ("", "Auto"):
             arguments["pixel_size"] = pixel_size
 
         # Lookup alias_id from the selected model name
