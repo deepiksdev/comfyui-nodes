@@ -30,13 +30,8 @@ class ImageNode:
 
         optional_inputs = {
             "seed_value": ("INT", {"default": -1}),
-            "steps": ("INT", {"default": 4, "min": 1, "max": 40}),
-            "guidance_scale": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 20.0, "step": 0.1}),
             "num_images": ("INT", {"default": 1, "min": 1, "max": 10}),
-            "enable_safety_checker": ("BOOLEAN", {"default": True}),
             "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
-            "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
-            "loras": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
             "output_prefix": ("STRING", {"default": ""}),
             "aspect_ratio": (["Auto"], {"default": "Auto"}),
@@ -47,6 +42,7 @@ class ImageNode:
 
         return {
             "required": {
+                "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
             },
@@ -65,16 +61,12 @@ class ImageNode:
 
     def generate_image(
         self,
+        model,
         prompt,
         negative_prompt="",
         seed_value=-1,
-        steps=28, # Fixed argument name to match parameter
-        guidance_scale=3.5,
         num_images=1,
-        enable_safety_checker=True,
         output_format="png",
-        model="Flux Schnell",
-        loras="", # Supports "URL" or "URL, scale" (e.g. "https://..., 0.8") per line
         endpoint="https://api.deepgen.app",
         output_prefix="",
         aspect_ratio=None,
@@ -85,10 +77,10 @@ class ImageNode:
         arguments = {
             "prompt": prompt,
             "negative_prompt": negative_prompt,
-            "steps": steps,
-            "guidance_scale": guidance_scale,
+            "steps": 28,
+            "guidance_scale": 3.5,
             "num_images": num_images,
-            "enable_safety_checker": enable_safety_checker,
+            "enable_safety_checker": True,
             "output_format": output_format,
         }
 
@@ -101,28 +93,6 @@ class ImageNode:
 
         # Lookup alias_id from the selected model name
         alias_id = self.models_map.get(model, "flux_schnell")
-
-
-        if loras:
-            # Parse loras string into a list of dictionaries
-            loras_list = []
-            for l in loras.splitlines():
-                if not l.strip():
-                    continue
-                parts = l.split(",")
-                path = parts[0].strip()
-                scale = 1.0
-                if len(parts) > 1:
-                    try:
-                        scale = float(parts[1].strip())
-                    except ValueError:
-                        pass
-                        #rint(f"Warning: Invalid scale for LoRA {path}, defaulting to 1.0")
-                
-                loras_list.append({"path": path, "scale": scale})
-
-            if loras_list:
-                arguments["loras"] = loras_list
 
 
         if seed_value != -1:
