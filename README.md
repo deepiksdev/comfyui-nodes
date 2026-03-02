@@ -70,6 +70,32 @@ ComfyUI Manager is a highly recommended extension for managing custom nodes.
     ```
 4.  **Restart ComfyUI**.
 
+### 4. Update DeepGen Extension
+
+#### Option A: Using ComfyUI Manager (Recommended)
+
+1.  Open ComfyUI in your browser.
+2.  Click the **Manager** button.
+3.  Click **Fetch Updates**.
+4.  If updates are available, click **Update** next to `ComfyUI-DeepGen-API`.
+5.  Restart ComfyUI when prompted.
+
+#### Option B: Manual Update
+
+1.  Navigate to the install directory:
+    ```bash
+    cd ComfyUI/custom_nodes/ComfyUI-DeepGen-API
+    ```
+2.  Pull the latest updates from the repository:
+    ```bash
+    git pull
+    ```
+3.  Update dependencies (if any have changed):
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  **Restart ComfyUI**.
+
 ---
 
 ## Configuration
