@@ -589,6 +589,10 @@ class ResultProcessor:
                 # Returns shape (width, height)
                 return (self.width, self.height)
                 
+            def save_to(self, filepath, **kwargs):
+                import shutil
+                shutil.copy2(self.filepath, filepath)
+                
             def __str__(self):
                 return self.filepath
                 
