@@ -32,6 +32,7 @@ class LLMNode:
                 "prompt": ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
+                "seed_value": ("INT", {"default": -1}),
                 "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
                 "output_prefix": ("STRING", {"default": ""}),
             },
@@ -47,7 +48,7 @@ class LLMNode:
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/LLM"
 
-    def generate_text(self, model, prompt, endpoint="https://api.deepgen.app", output_prefix="", **kwargs):
+    def generate_text(self, model, prompt, seed_value=-1, endpoint="https://api.deepgen.app", output_prefix="", **kwargs):
         try:
             alias_id = self.models_map.get(model, "gemini-3-flash")
             
@@ -94,6 +95,9 @@ class LLMNode:
                 "prompt": prompt,
                 "stream": False,
             }
+            if seed_value != -1:
+                arguments["seed"] = seed_value
+
             if image_urls:
                 arguments["attachments_urls"] = image_urls
             if attachments_files:

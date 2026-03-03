@@ -38,6 +38,7 @@ class VideoNode:
                 "prompt": ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
+                "seed_value": ("INT", {"default": -1}),
                 "duration": (["5", "10"], {"default": "5"}),
                 "aspect_ratio": (["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"], {"default": "16:9"}),
                 "loop": ("BOOLEAN", {"default": False}),
@@ -61,6 +62,7 @@ class VideoNode:
         self,
         model,
         prompt,
+        seed_value=-1,
         duration="5",
         aspect_ratio="16:9",
         loop=False,
@@ -78,6 +80,8 @@ class VideoNode:
                 "loop": loop,
                 "queue": True,
             }
+            if seed_value != -1:
+                arguments["seed"] = seed_value
 
             images_to_process = []
             videos_to_process = []
