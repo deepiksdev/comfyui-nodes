@@ -32,8 +32,8 @@ class VideoNode:
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
-    RETURN_NAMES = ("video_url", "output_prefix_and_model", "total_credits_used",)
+    RETURN_TYPES = ("IMAGE", "STRING", "FLOAT",)
+    RETURN_NAMES = ("IMAGE", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate_video"
     CATEGORY = "DeepGen/VideoGeneration"
 
@@ -84,7 +84,7 @@ class VideoNode:
                 results = DeepGenApiHandler.submit_multiple_and_get_results(alias_id, arguments, variations, api_url=endpoint)
                 results = self._poll_results(results, endpoint)
                 
-                video_urls = [ResultProcessor.process_video_result(r)[0] for r in results]
+                video_tensors = [ResultProcessor.process_video_result(r)[0] for r in results]
                 # Returning first one as primary, though we could return a list if we changed RETURN_TYPES
                 
                 def get_dict(r):
@@ -102,7 +102,7 @@ class VideoNode:
                         cred = obj.get("output", {}).get("total_credits_used", obj.get("aiCredits", 0.0))
                     credits_out += float(cred)
                     
-                return (video_urls[0], prefixed_model, credits_out)
+                return (video_tensors[0], prefixed_model, credits_out)
             else:
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 result = self._poll_results([result], endpoint)[0]
@@ -111,7 +111,7 @@ class VideoNode:
                 if not isinstance(res_obj, dict):
                     res_obj = getattr(res_obj, '__dict__', {}) or {}
                 
-                video_url = ResultProcessor.process_video_result(result)[0]
+                video_tensor = ResultProcessor.process_video_result(result)[0]
                 agent_alias = res_obj.get("agent_alias", "")
                 prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
                 
@@ -120,7 +120,7 @@ class VideoNode:
                     cred = res_obj.get("output", {}).get("total_credits_used", res_obj.get("aiCredits", 0.0))
                 credits_out = float(cred)
                 
-                return (video_url, prefixed_model, credits_out)
+                return (video_tensor, prefixed_model, credits_out)
 
         except ValueError as ve:
             raise ve

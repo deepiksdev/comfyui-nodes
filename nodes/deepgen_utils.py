@@ -572,18 +572,51 @@ class ResultProcessor:
 
     @staticmethod
     def process_video_result(result):
-        """Process video generation result and return tuple of URLs."""
+        """Process video generation result and return tensor of frames."""
+        import tempfile
+        import cv2
+        import requests
+        import os
+        import traceback
         try:
             video_urls = ResultProcessor._extract_video_urls(result)
             if not video_urls:
-                #rint(f"No videos found in result: {result}")
-                return ("Error: No video found in result",)
+                return ResultProcessor.create_blank_image()
             
-            # Return as tuple of strings (first one if only one expected by most nodes)
-            return (video_urls[0],)
+            video_url = video_urls[0]
+            response = requests.get(video_url, stream=True)
+            if response.status_code != 200:
+                raise ValueError(f"Failed to download video from {video_url}")
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+                temp_path = f.name
+                
+            cap = cv2.VideoCapture(temp_path)
+            frames = []
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frames.append(frame.astype(np.float32) / 255.0)
+            cap.release()
+            
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+            
+            if not frames:
+                return ResultProcessor.create_blank_image()
+                
+            video_tensor = torch.from_numpy(np.stack(frames, axis=0))
+            return (video_tensor,)
+            
         except Exception as e:
-            #rint(f"Error processing video result: {str(e)}")
-            return (f"Error: Processing video result failed: {str(e)}",)
+            traceback.print_exc()
+            return ResultProcessor.create_blank_image()
 
     @staticmethod
     def create_blank_image():
@@ -792,7 +825,7 @@ class DeepGenApiHandler:
     def handle_video_generation_error(model_name, error):
         """Handle video generation errors consistently."""
         #rint(f"Error generating video with {model_name}: {str(error)}")
-        return ("Error: Unable to generate video.",)
+        return ResultProcessor.create_blank_image()
 
     @staticmethod
     def handle_image_generation_error(model_name, error):
