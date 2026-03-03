@@ -32,11 +32,7 @@ class LLMNode:
                 "prompt": ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
-                "system_prompt": ("STRING", {"default": "", "multiline": True}),
-                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
-                "reasoning": ("BOOLEAN", {"default": False}),
                 "max_tokens": ("INT", {"default": 1024, "min": 0, "max": 100000}),
-                "attachments_urls": ("STRING", {"default": "", "multiline": True}),
                 "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
                 "output_prefix": ("STRING", {"default": ""}),
             },
@@ -52,17 +48,11 @@ class LLMNode:
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/LLM"
 
-    def generate_text(self, model, prompt, system_prompt="", temperature=1.0, reasoning=False, max_tokens=1024, attachments_urls=None, endpoint="https://api.deepgen.app", output_prefix="", **kwargs):
+    def generate_text(self, model, prompt, max_tokens=1024, endpoint="https://api.deepgen.app", output_prefix="", **kwargs):
         try:
             alias_id = self.models_map.get(model, "gemini-3-flash")
             
             image_urls = []
-            if attachments_urls:
-                if isinstance(attachments_urls, list):
-                    image_urls.extend([u for u in attachments_urls if isinstance(u, str) and u.strip()])
-                elif isinstance(attachments_urls, str):
-                    image_urls.extend([u.strip() for u in attachments_urls.split("\n") if u.strip()])
-                    
             images_to_process = []
             videos_to_process = []
             for k, v in kwargs.items():
@@ -103,9 +93,6 @@ class LLMNode:
             
             arguments = {
                 "prompt": prompt,
-                "system_prompt": system_prompt,
-                "temperature": temperature,
-                "reasoning": reasoning,
                 "stream": False,
             }
             if image_urls:
