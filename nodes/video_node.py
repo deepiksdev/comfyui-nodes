@@ -14,8 +14,27 @@ deepgen_config = DeepGenConfig()
 class VideoNode:
     @classmethod
     def INPUT_TYPES(cls):
+        # Load models from CSV
+        cls.models_list = []
+        cls.models_map = {} # Map from name to value (alias_id)
+        
+        csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models.csv")
+        try:
+            import csv
+            with open(csv_path, mode='r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if len(row) >= 8 and row[7].strip() == "T2V":
+                        cls.models_list.append(row[1])
+                        cls.models_map[row[1]] = row[0]
+        except Exception as e:
+            print(f"DeepGen: Failed to load models.csv for video_node: {e}")
+            cls.models_list = ["Kling 2.5 Turbo Pro"]
+            cls.models_map = {"Kling 2.5 Turbo Pro": "kling2.5-turbo-pro"}
+
         return {
             "required": {
+                "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
                 "prompt": ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
@@ -26,11 +45,15 @@ class VideoNode:
                 "aspect_ratio": (["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "9:21"], {"default": "16:9"}),
                 "loop": ("BOOLEAN", {"default": False}),
                 "variations": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
-                "alias_id": ("STRING", {"default": "deepgen/minimax/video-01-live/image-to-video"}),
                 "endpoint": ("STRING", {"default": "https://api.deepgen.app"}),
                 "output_prefix": ("STRING", {"default": ""}),
             },
         }
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, **kwargs):
+        """Bypass standard ComfyUI validation for dynamic combo boxes"""
+        return True
 
     RETURN_TYPES = ("VIDEO", "STRING", "FLOAT",)
     RETURN_NAMES = ("VIDEO", "output_prefix_and_model", "total_credits_used",)
@@ -39,6 +62,7 @@ class VideoNode:
 
     def generate_video(
         self,
+        model,
         prompt,
         image=None,
         start_image=None,
@@ -47,11 +71,12 @@ class VideoNode:
         aspect_ratio="16:9",
         loop=False,
         variations=1,
-        alias_id="deepgen/minimax/video-01-live/image-to-video",
         endpoint="https://api.deepgen.app",
         output_prefix="",
+        **kwargs
     ):
         try:
+            alias_id = self.models_map.get(model, "kling2.5-turbo-pro")
             arguments = {
                 "prompt": prompt,
                 "duration": duration,
@@ -79,6 +104,47 @@ class VideoNode:
                 img_url = ImageUtils.upload_image(end_image)
                 if img_url:
                     arguments["end_image_url"] = img_url
+
+            images_to_process = []
+            videos_to_process = []
+            for k, v in kwargs.items():
+                if k.startswith('image_') and v is not None:
+                    images_to_process.append(v)
+                elif k.startswith('video_') and v is not None:
+                    videos_to_process.append(v)
+
+            attachments_files = []
+            for img in images_to_process:
+                if len(img.shape) == 4:
+                    for i in range(img.shape[0]):
+                        single_image = img[i:i+1]
+                        attach = ImageUtils.get_attachment_file(single_image, filename=f"image_{len(attachments_files)}.png")
+                        if attach:
+                            attachments_files.append(attach)
+                else:
+                    attach = ImageUtils.get_attachment_file(img, filename=f"image_{len(attachments_files)}.png")
+                    if attach:
+                        attachments_files.append(attach)
+                        
+            for vid in videos_to_process:
+                vid_path = None
+                if isinstance(vid, str) and os.path.exists(vid):
+                    vid_path = vid
+                elif hasattr(vid, "filepath") and vid.filepath and os.path.exists(vid.filepath):
+                    vid_path = vid.filepath
+                
+                if vid_path:
+                    import base64
+                    with open(vid_path, "rb") as vf:
+                        b64 = base64.b64encode(vf.read()).decode("utf-8")
+                        attachments_files.append({
+                            "attachment_bytes": b64,
+                            "attachment_mime_type": "video/mp4",
+                            "attachment_file_name": f"video_{len(attachments_files)}.mp4"
+                        })
+            
+            if attachments_files:
+                arguments["attachments_files"] = attachments_files
 
             if variations > 1:
                 results = DeepGenApiHandler.submit_multiple_and_get_results(alias_id, arguments, variations, api_url=endpoint)

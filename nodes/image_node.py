@@ -20,7 +20,7 @@ class ImageNode:
             with open(csv_path, mode='r', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    if len(row) >= 2:
+                    if len(row) >= 8 and row[7].strip() == "T2I":
                         cls.models_list.append(row[1])
                         cls.models_map[row[1]] = row[0]
         except Exception as e:
