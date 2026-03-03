@@ -578,6 +578,20 @@ class ResultProcessor:
         import folder_paths
         import uuid
         import traceback
+        
+        class ComfyVideoMock:
+            def __init__(self, filepath, width=512, height=512):
+                self.filepath = filepath
+                self.width = width
+                self.height = height
+                
+            def get_dimensions(self):
+                # Returns shape (width, height)
+                return (self.width, self.height)
+                
+            def __str__(self):
+                return self.filepath
+                
         try:
             video_urls = ResultProcessor._extract_video_urls(result)
             if not video_urls:
@@ -597,7 +611,7 @@ class ResultProcessor:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
                 
-            return (filepath,)
+            return (ComfyVideoMock(filepath),)
             
         except Exception as e:
             traceback.print_exc()
