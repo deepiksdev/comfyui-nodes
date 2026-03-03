@@ -202,11 +202,14 @@ class VideoNode:
                 
             if res_obj.get("status") == "queued" and "queue_id" in res_obj:
                 agent_alias = res_obj.get("agent_alias", "kling-1")
-                pending[i] = (res_obj["queue_id"], agent_alias)
+                q_id = res_obj["queue_id"]
+                pending[i] = (q_id, agent_alias)
+                print(f"DeepGen Video: Queued generation with queue_id: {q_id} (model: {agent_alias})")
             else:
                 final_results[i] = res
 
         while pending:
+            print(f"DeepGen Video: Polling {len(pending)} pending generation(s)...")
             time.sleep(15)
             completed_indices = []
             for idx, (queue_id, agent_alias) in pending.items():
@@ -218,6 +221,7 @@ class VideoNode:
                         if isinstance(poll_data, dict) and "output" in poll_data:
                             final_results[idx] = poll_data
                             completed_indices.append(idx)
+                            print(f"DeepGen Video: Generation completed for queue_id: {queue_id}")
                         elif isinstance(poll_data, dict) and poll_data.get("status") in ["failed", "error"]:
                             raise ValueError(f"Video generation failed: {poll_data}")
                     else:
