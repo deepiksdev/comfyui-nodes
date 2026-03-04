@@ -8,6 +8,7 @@ node_list = [
     "video_node",
     "llm_node",
     "display_node",
+    "element_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}

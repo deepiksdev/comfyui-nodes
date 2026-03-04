@@ -64,7 +64,7 @@ app.registerExtension({
                 if (info && info.inputs) {
                     // Synchronously add image sockets saved in the JSON so ComfyUI links match
                     for (const input of info.inputs) {
-                        if ((input.name.startsWith("image_") && input.type === "IMAGE") || (input.name.startsWith("video_") && input.type === "VIDEO")) {
+                        if ((input.name.startsWith("image_") && input.type === "IMAGE") || (input.name.startsWith("video_") && input.type === "VIDEO") || (input.name.startsWith("element_") && input.type === "ELEMENT")) {
                             const exists = this.inputs && this.inputs.find(inp => inp.name === input.name);
                             if (!exists) {
                                 this.addInput(input.name, input.type);
@@ -93,6 +93,7 @@ app.registerExtension({
                     const modelConfig = configs.find(c => c.name === selectedModelName);
                     const targetImages = modelConfig ? (modelConfig.nb_of_images || 0) : 1;
                     const targetVideos = modelConfig ? (modelConfig.nb_of_videos || 0) : 0;
+                    const targetElements = modelConfig ? (modelConfig.nb_of_elements || 0) : 0;
 
                     // Handle dynamic choice widgets (aspect_ratio, resolution, pixel_size)
                     manageDynamicChoiceWidget(node, "aspect_ratio", modelConfig ? modelConfig.aspect_ratios : []);
@@ -120,6 +121,14 @@ app.registerExtension({
                                     node.removeInput(i);
                                 }
                             }
+                        } else if (node.inputs[i].name.startsWith("element_")) {
+                            const match = node.inputs[i].name.match(/element_(\d+)/);
+                            if (match) {
+                                const idx = parseInt(match[1]);
+                                if (idx > targetElements) {
+                                    node.removeInput(i);
+                                }
+                            }
                         }
                     }
 
@@ -138,6 +147,15 @@ app.registerExtension({
                         const exists = node.inputs.find(inp => inp.name === socketName);
                         if (!exists) {
                             node.addInput(socketName, "VIDEO");
+                        }
+                    }
+
+                    // 4. Add any missing element_X sockets up to target amount
+                    for (let i = 1; i <= targetElements; i++) {
+                        const socketName = `element_${i}`;
+                        const exists = node.inputs.find(inp => inp.name === socketName);
+                        if (!exists) {
+                            node.addInput(socketName, "ELEMENT");
                         }
                     }
 

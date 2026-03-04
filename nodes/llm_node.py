@@ -60,6 +60,58 @@ class LLMNode:
                 if k in ["model", "prompt", "seed_value", "endpoint", "output_prefix"]:
                     continue
 
+                if k.startswith("element_") and isinstance(v, dict):
+                    for elem_key, elem_val in v.items():
+                        if elem_val is None:
+                            continue
+                        
+                        vid_path = None
+                        if isinstance(elem_val, str):
+                            try:
+                                if os.path.exists(elem_val):
+                                    vid_path = elem_val
+                            except Exception:
+                                pass
+                        elif hasattr(elem_val, "filepath") and elem_val.filepath:
+                            try:
+                                if os.path.exists(elem_val.filepath):
+                                    vid_path = elem_val.filepath
+                            except Exception:
+                                pass
+                        
+                        prefix = f"{k}_{elem_key}"
+                        
+                        if vid_path:
+                            import base64
+                            import mimetypes
+                            import os as os_mod
+                            mime_type, _ = mimetypes.guess_type(vid_path)
+                            mime_type = mime_type or "application/octet-stream"
+                            original_name = os_mod.basename(vid_path)
+                            new_filename = f"{prefix}___{original_name}"
+                            with open(vid_path, "rb") as vf:
+                                b64 = base64.b64encode(vf.read()).decode("utf-8")
+                                attachments_files.append({
+                                    "attachment_bytes": b64,
+                                    "attachment_mime_type": mime_type,
+                                    "attachment_file_name": new_filename
+                                })
+                            continue
+                        
+                        if hasattr(elem_val, "shape"):
+                            img = elem_val
+                            if len(img.shape) == 4:
+                                for i in range(img.shape[0]):
+                                    single_image = img[i:i+1]
+                                    attach = ImageUtils.get_attachment_file(single_image, filename=f"{prefix}___{i}.png")
+                                    if attach:
+                                        attachments_files.append(attach)
+                            else:
+                                attach = ImageUtils.get_attachment_file(img, filename=f"{prefix}___image.png")
+                                if attach:
+                                    attachments_files.append(attach)
+                    continue
+
                 vid_path = None
                 if isinstance(v, str):
                     try:
