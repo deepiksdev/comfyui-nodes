@@ -735,7 +735,7 @@ class DeepGenApiHandler:
                 result = response.json()
                 if isinstance(result, dict) and result.get("error"):
                     raise ValueError(f"DeepGen API Error: {result['error']}")
-                #rint(f"DeepGen API Response: {result}")
+                print(f"DeepGen API Response: {result}")
                 return result
             elif response.status_code == 201: # Accepted/Async?
                 # Handle polling if needed, but assuming sync for simple endpoints for now
@@ -788,7 +788,7 @@ class DeepGenApiHandler:
                 raise ValueError(f"Polling failed ({response.status_code}): {response.text}")
             
             data = response.json()
-            #rint(f"DeepGen Poll Response: {data}")
+            print(f"DEEPGEN POLL RESPONSE: {data}")
             
             status = data.get("status")
             

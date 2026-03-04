@@ -20,7 +20,7 @@ class ImageNode:
             with open(csv_path, mode='r', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    if len(row) >= 2:
+                    if len(row) >= 10 and row[9].strip() == "T2I":
                         cls.models_list.append(row[1])
                         cls.models_map[row[1]] = row[0]
         except Exception as e:
@@ -95,25 +95,108 @@ class ImageNode:
         if seed_value != -1:
             arguments["seed"] = seed_value
 
-        # Handle images if provided
-        images_to_process = []
-
-        for k, v in kwargs.items():
-            if k.startswith('image_') and v is not None:
-                images_to_process.append(v)
-
         attachments_files = []
-        for img in images_to_process:
-            if len(img.shape) == 4:
-                for i in range(img.shape[0]):
-                    single_image = img[i:i+1]
-                    attach = ImageUtils.get_attachment_file(single_image, filename=f"image_{len(attachments_files)}.png")
+        for k, v in kwargs.items():
+            if v is None:
+                continue
+            if k in ["prompt", "negative_prompt", "seed_value", "num_images", "output_format", "endpoint", "output_prefix", "aspect_ratio", "resolution", "pixel_size"]:
+                continue
+
+            if k.startswith("element_") and isinstance(v, dict):
+                for elem_key, elem_val in v.items():
+                    if elem_val is None:
+                        continue
+                    
+                    vid_path = None
+                    if isinstance(elem_val, str):
+                        try:
+                            if os.path.exists(elem_val):
+                                vid_path = elem_val
+                        except Exception:
+                            pass
+                    elif hasattr(elem_val, "filepath") and elem_val.filepath:
+                        try:
+                            if os.path.exists(elem_val.filepath):
+                                vid_path = elem_val.filepath
+                        except Exception:
+                            pass
+                    
+                    prefix = f"{k}_{elem_key}"
+                    
+                    if vid_path:
+                        import base64
+                        import mimetypes
+                        import os as os_mod
+                        mime_type, _ = mimetypes.guess_type(vid_path)
+                        mime_type = mime_type or "application/octet-stream"
+                        original_name = os_mod.basename(vid_path)
+                        new_filename = f"{prefix}___{original_name}"
+                        with open(vid_path, "rb") as vf:
+                            b64 = base64.b64encode(vf.read()).decode("utf-8")
+                            attachments_files.append({
+                                "attachment_bytes": b64,
+                                "attachment_mime_type": mime_type,
+                                "attachment_file_name": new_filename
+                            })
+                        continue
+                    
+                    if hasattr(elem_val, "shape"):
+                        img = elem_val
+                        if len(img.shape) == 4:
+                            for i in range(img.shape[0]):
+                                single_image = img[i:i+1]
+                                attach = ImageUtils.get_attachment_file(single_image, filename=f"{prefix}___{i}.png")
+                                if attach:
+                                    attachments_files.append(attach)
+                        else:
+                            attach = ImageUtils.get_attachment_file(img, filename=f"{prefix}___image.png")
+                            if attach:
+                                attachments_files.append(attach)
+                continue
+
+            vid_path = None
+            if isinstance(v, str):
+                try:
+                    if os.path.exists(v):
+                        vid_path = v
+                except Exception:
+                    pass
+            elif hasattr(v, "filepath") and v.filepath:
+                try:
+                    if os.path.exists(v.filepath):
+                        vid_path = v.filepath
+                except Exception:
+                    pass
+            
+            if vid_path:
+                import base64
+                import mimetypes
+                import os as os_mod
+                mime_type, _ = mimetypes.guess_type(vid_path)
+                mime_type = mime_type or "application/octet-stream"
+                original_name = os_mod.basename(vid_path)
+                new_filename = f"{k}__{original_name}"
+                with open(vid_path, "rb") as vf:
+                    b64 = base64.b64encode(vf.read()).decode("utf-8")
+                    attachments_files.append({
+                        "attachment_bytes": b64,
+                        "attachment_mime_type": mime_type,
+                        "attachment_file_name": new_filename
+                    })
+                continue
+            
+            if hasattr(v, "shape"):
+                img = v
+                if len(img.shape) == 4:
+                    for i in range(img.shape[0]):
+                        single_image = img[i:i+1]
+                        attach = ImageUtils.get_attachment_file(single_image, filename=f"{k}__{i}.png")
+                        if attach:
+                            attachments_files.append(attach)
+                else:
+                    attach = ImageUtils.get_attachment_file(img, filename=f"{k}__image.png")
                     if attach:
                         attachments_files.append(attach)
-            else:
-                attach = ImageUtils.get_attachment_file(img, filename=f"image_{len(attachments_files)}.png")
-                if attach:
-                    attachments_files.append(attach)
 
         if attachments_files:
             arguments["attachments_files"] = attachments_files
@@ -123,13 +206,20 @@ class ImageNode:
             # The API returns a list [WebResponse(...)] or a dict depending on endpoint.
             # We better extract properties safely:
             res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
-            if not isinstance(res_obj, dict):
-                res_obj = getattr(res_obj, '__dict__', {}) or {}
-            
             img_tensor = ResultProcessor.process_image_result(result)[0]
-            agent_alias = res_obj.get("agent_alias", "")
+            
+            def _get_attr(obj, key, default=None):
+                if isinstance(obj, dict): return obj.get(key, default)
+                return getattr(obj, key, default)
+                
+            agent_alias = _get_attr(res_obj, "agent_alias", "")
             prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
-            credits_out = float(res_obj.get("total_credits_used", 0.0))
+            
+            cred = _get_attr(res_obj, "total_credits_used")
+            if cred is None:
+                out_obj = _get_attr(res_obj, "output", {})
+                cred = _get_attr(out_obj, "total_credits_used", _get_attr(res_obj, "aiCredits", 0.0))
+            credits_out = float(cred or 0.0)
             return (img_tensor, prefixed_model, credits_out)
         except ValueError as ve:
             raise ve

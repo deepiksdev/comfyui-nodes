@@ -7,10 +7,8 @@ node_list = [
     "image_node",
     "video_node",
     "llm_node",
-    "vlm_node",
-    "trainer_node",
-    "upscaler_node",
     "display_node",
+    "element_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}

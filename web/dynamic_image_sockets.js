@@ -57,14 +57,14 @@ function manageDynamicChoiceWidget(node, widgetName, optionsList) {
 app.registerExtension({
     name: "DeepGen.DynamicImageSockets",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "Image_deepgen") {
+        if (["Image_deepgen", "LLM_deepgen", "Video_deepgen"].includes(nodeData.name)) {
             // Intercept node configure to rebuild saved JSON inputs synchronously
             const onConfigure = nodeType.prototype.onConfigure;
             nodeType.prototype.onConfigure = function (info) {
                 if (info && info.inputs) {
                     // Synchronously add image sockets saved in the JSON so ComfyUI links match
                     for (const input of info.inputs) {
-                        if (input.name.startsWith("image_") && input.type === "IMAGE") {
+                        if ((input.name.startsWith("image_") && input.type === "IMAGE") || (input.name.startsWith("video_") && input.type === "VIDEO") || (input.name.startsWith("element_") && input.type === "ELEMENT") || (input.name.startsWith("frame_") && input.type === "IMAGE")) {
                             const exists = this.inputs && this.inputs.find(inp => inp.name === input.name);
                             if (!exists) {
                                 this.addInput(input.name, input.type);
@@ -91,7 +91,10 @@ app.registerExtension({
 
                     const selectedModelName = modelWidget.value;
                     const modelConfig = configs.find(c => c.name === selectedModelName);
-                    const targetImages = modelConfig ? modelConfig.nb_of_images : 1;
+                    const targetImages = modelConfig ? (modelConfig.nb_of_images || 0) : 1;
+                    const targetVideos = modelConfig ? (modelConfig.nb_of_videos || 0) : 0;
+                    const targetElements = modelConfig ? (modelConfig.nb_of_elements || 0) : 0;
+                    const targetFrames = modelConfig ? (modelConfig.nb_of_frames || 0) : 0;
 
                     // Handle dynamic choice widgets (aspect_ratio, resolution, pixel_size)
                     manageDynamicChoiceWidget(node, "aspect_ratio", modelConfig ? modelConfig.aspect_ratios : []);
@@ -100,7 +103,7 @@ app.registerExtension({
 
                     if (!node.inputs) return;
 
-                    // 1. Remove any image_X sockets that are beyond the target amount
+                    // 1. Remove any image_X or video_X sockets that are beyond the target amount
                     // We iterate backwards to safely remove inputs
                     for (let i = node.inputs.length - 1; i >= 0; i--) {
                         if (node.inputs[i].name.startsWith("image_")) {
@@ -111,12 +114,63 @@ app.registerExtension({
                                     node.removeInput(i);
                                 }
                             }
+                        } else if (node.inputs[i].name.startsWith("video_")) {
+                            const match = node.inputs[i].name.match(/video_(\d+)/);
+                            if (match) {
+                                const idx = parseInt(match[1]);
+                                if (idx > targetVideos) {
+                                    node.removeInput(i);
+                                }
+                            }
+                        } else if (node.inputs[i].name.startsWith("element_")) {
+                            const match = node.inputs[i].name.match(/element_(\d+)/);
+                            if (match) {
+                                const idx = parseInt(match[1]);
+                                if (idx > targetElements) {
+                                    node.removeInput(i);
+                                }
+                            }
+                        } else if (node.inputs[i].name.startsWith("frame_")) {
+                            const match = node.inputs[i].name.match(/frame_(\d+)/);
+                            if (match) {
+                                const idx = parseInt(match[1]);
+                                if (idx > targetFrames) {
+                                    node.removeInput(i);
+                                }
+                            }
                         }
                     }
 
                     // 2. Add any missing image_X sockets up to target amount
                     for (let i = 1; i <= targetImages; i++) {
                         const socketName = `image_${i}`;
+                        const exists = node.inputs.find(inp => inp.name === socketName);
+                        if (!exists) {
+                            node.addInput(socketName, "IMAGE");
+                        }
+                    }
+
+                    // 3. Add any missing video_X sockets up to target amount
+                    for (let i = 1; i <= targetVideos; i++) {
+                        const socketName = `video_${i}`;
+                        const exists = node.inputs.find(inp => inp.name === socketName);
+                        if (!exists) {
+                            node.addInput(socketName, "VIDEO");
+                        }
+                    }
+
+                    // 4. Add any missing element_X sockets up to target amount
+                    for (let i = 1; i <= targetElements; i++) {
+                        const socketName = `element_${i}`;
+                        const exists = node.inputs.find(inp => inp.name === socketName);
+                        if (!exists) {
+                            node.addInput(socketName, "ELEMENT");
+                        }
+                    }
+
+                    // 5. Add any missing frame_X sockets up to target amount
+                    for (let i = 1; i <= targetFrames; i++) {
+                        const socketName = `frame_${i}`;
                         const exists = node.inputs.find(inp => inp.name === socketName);
                         if (!exists) {
                             node.addInput(socketName, "IMAGE");
