@@ -16,7 +16,6 @@ async function fetchModelsConfig() {
     }
 }
 
-// Helper to dynamically hide/show and update options of a combobox widget
 function manageDynamicChoiceWidget(node, widgetName, optionsList) {
     if (!node.widgets) return;
     if (!node._hiddenWidgets) node._hiddenWidgets = {};
@@ -31,25 +30,30 @@ function manageDynamicChoiceWidget(node, widgetName, optionsList) {
         if (!widget) {
             widget = node._hiddenWidgets[widgetName];
             if (widget) {
-                // Re-add hidden widget
+                // Re-add hidden widget (for backward compatibility if it was spliced)
                 node.widgets.push(widget);
                 delete node._hiddenWidgets[widgetName];
             }
         }
         if (widget) {
+            // Restore visibility if it was hidden visually
+            if (widget.type === "hidden") {
+                widget.type = widget.origType || "COMBO";
+                widget.computeSize = widget.origComputeSize || (() => [200, 20]);
+            }
             widget.options.values = optionsList;
             if (!optionsList.includes(widget.value)) {
                 widget.value = optionsList[0];
             }
         }
     } else {
-        // Hide
-        if (widget) {
-            const idx = node.widgets.indexOf(widget);
-            if (idx !== -1) {
-                node.widgets.splice(idx, 1);
-                node._hiddenWidgets[widgetName] = widget;
-            }
+        // Hide visually without removing from widget array to prevent saved value index shifting
+        if (widget && widget.type !== "hidden") {
+            widget.origType = widget.type;
+            widget.origComputeSize = widget.computeSize;
+            widget.type = "hidden";
+            // A height of -4 combined with hidden type makes LiteGraph effectively ignore its layout space
+            widget.computeSize = () => [0, -4];
         }
     }
 }
