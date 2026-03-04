@@ -221,23 +221,17 @@ class VideoNode:
                 result = DeepGenApiHandler.submit_and_get_result(alias_id, arguments, api_url=endpoint)
                 result = self._poll_results([result], endpoint)[0]
                 
-                res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+                res_dic = result[0] if isinstance(result, list) and len(result) > 0 else result
                 video_path = ResultProcessor.process_video_result(result)[0]
                 
-                def _get_attr(obj, key, default=None):
-                    if isinstance(obj, dict): return obj.get(key, default)
-                    return getattr(obj, key, default)
-                
-                agent_alias = _get_attr(res_obj, "agent_alias", "")
+                out_dic = res_dic.get("output", {})
+                agent_alias = out_dic.get("agent_alias", "")
+                print("AGENT ALIAS",agent_alias,out_dic)
                 prefixed_model = f"{output_prefix}_{agent_alias}" if output_prefix else agent_alias
                 
-                cred = _get_attr(res_obj, "total_credits_used")
-                if cred is None:
-                    out_obj = _get_attr(res_obj, "output", {})
-                    cred = _get_attr(out_obj, "total_credits_used", _get_attr(res_obj, "aiCredits", 0.0))
-                credits_out = float(cred or 0.0)
-                
-                return (video_path, prefixed_model, credits_out)
+                cred = out_dic.get("total_credits_used")
+                print("WILL RETURN",prefixed_model, cred)
+                return (video_path, prefixed_model, cred)
 
         except ValueError as ve:
             raise ve
@@ -274,7 +268,7 @@ class VideoNode:
                 res_obj = getattr(res_obj, '__dict__', {}) or {}
                 
             if res_obj.get("status") == "queued" and "queue_id" in res_obj:
-                agent_alias = res_obj.get("agent_alias", "kling-1")
+                agent_alias = res_obj.get("agent_alias", "_")
                 q_id = res_obj["queue_id"]
                 pending[i] = (q_id, agent_alias)
                 print(f"DeepGen Video: Queued generation with queue_id: {q_id} (model: {agent_alias})")
@@ -291,6 +285,7 @@ class VideoNode:
                     poll_response = requests.get(poll_url, headers=headers)
                     if poll_response.status_code == 200:
                         poll_data = poll_response.json()
+                        print("POLL DATA",poll_data)
                         if isinstance(poll_data, dict) and "output" in poll_data:
                             final_results[idx] = poll_data
                             completed_indices.append(idx)
