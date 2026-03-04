@@ -20,7 +20,7 @@ class ImageNode:
             with open(csv_path, mode='r', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    if len(row) >= 8 and row[7].strip() == "T2I":
+                    if len(row) >= 10 and row[9].strip() == "T2I":
                         cls.models_list.append(row[1])
                         cls.models_map[row[1]] = row[0]
         except Exception as e:
@@ -95,25 +95,56 @@ class ImageNode:
         if seed_value != -1:
             arguments["seed"] = seed_value
 
-        # Handle images if provided
-        images_to_process = []
-
-        for k, v in kwargs.items():
-            if k.startswith('image_') and v is not None:
-                images_to_process.append(v)
-
         attachments_files = []
-        for img in images_to_process:
-            if len(img.shape) == 4:
-                for i in range(img.shape[0]):
-                    single_image = img[i:i+1]
-                    attach = ImageUtils.get_attachment_file(single_image, filename=f"image_{len(attachments_files)}.png")
+        for k, v in kwargs.items():
+            if v is None:
+                continue
+            if k in ["prompt", "negative_prompt", "seed_value", "num_images", "output_format", "endpoint", "output_prefix", "aspect_ratio", "resolution", "pixel_size"]:
+                continue
+
+            vid_path = None
+            if isinstance(v, str):
+                try:
+                    if os.path.exists(v):
+                        vid_path = v
+                except Exception:
+                    pass
+            elif hasattr(v, "filepath") and v.filepath:
+                try:
+                    if os.path.exists(v.filepath):
+                        vid_path = v.filepath
+                except Exception:
+                    pass
+            
+            if vid_path:
+                import base64
+                import mimetypes
+                import os as os_mod
+                mime_type, _ = mimetypes.guess_type(vid_path)
+                mime_type = mime_type or "application/octet-stream"
+                original_name = os_mod.basename(vid_path)
+                new_filename = f"{k}__{original_name}"
+                with open(vid_path, "rb") as vf:
+                    b64 = base64.b64encode(vf.read()).decode("utf-8")
+                    attachments_files.append({
+                        "attachment_bytes": b64,
+                        "attachment_mime_type": mime_type,
+                        "attachment_file_name": new_filename
+                    })
+                continue
+            
+            if hasattr(v, "shape"):
+                img = v
+                if len(img.shape) == 4:
+                    for i in range(img.shape[0]):
+                        single_image = img[i:i+1]
+                        attach = ImageUtils.get_attachment_file(single_image, filename=f"{k}__{i}.png")
+                        if attach:
+                            attachments_files.append(attach)
+                else:
+                    attach = ImageUtils.get_attachment_file(img, filename=f"{k}__image.png")
                     if attach:
                         attachments_files.append(attach)
-            else:
-                attach = ImageUtils.get_attachment_file(img, filename=f"image_{len(attachments_files)}.png")
-                if attach:
-                    attachments_files.append(attach)
 
         if attachments_files:
             arguments["attachments_files"] = attachments_files
