@@ -733,8 +733,9 @@ class DeepGenApiHandler:
             
             if response.status_code == 200:
                 result = response.json()
-                if isinstance(result, dict) and result.get("error"):
-                    raise ValueError(f"DeepGen API Error: {result['error']}")
+                err_val = result.get("error") if isinstance(result, dict) else (result[0].get("error") if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict) else None)
+                if err_val:
+                    raise ValueError(f"DeepGen API Error: {err_val}")
                 print(f"DeepGen API Response: {result}")
                 return result
             elif response.status_code == 201: # Accepted/Async?
@@ -744,15 +745,15 @@ class DeepGenApiHandler:
                 #rint(f"DeepGen API Async Response: {result}")
                 if "request_id" in result:
                     return DeepGenApiHandler._poll_result(result["request_id"], api_url=base_url)
-                if isinstance(result, dict) and result.get("error"):
-                    raise ValueError(f"DeepGen API Error: {result['error']}")
+                err_val = result.get("error") if isinstance(result, dict) else (result[0].get("error") if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict) else None)
+                if err_val:
+                    raise ValueError(f"DeepGen API Error: {err_val}")
                 return result
             else:
                 error_msg = None
                 try:
                     err_data = response.json()
-                    if isinstance(err_data, dict) and err_data.get("error"):
-                        error_msg = err_data["error"]
+                    error_msg = err_data.get("error") if isinstance(err_data, dict) else (err_data[0].get("error") if isinstance(err_data, list) and len(err_data) > 0 and isinstance(err_data[0], dict) else None)
                 except Exception:
                     pass
                 if error_msg:
@@ -794,8 +795,9 @@ class DeepGenApiHandler:
             
             if status == "COMPLETED":
                 result = data.get("result", data)
-                if isinstance(result, dict) and result.get("error"):
-                    raise ValueError(f"DeepGen API Error: {result['error']}")
+                err_val = result.get("error") if isinstance(result, dict) else (result[0].get("error") if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict) else None)
+                if err_val:
+                    raise ValueError(f"DeepGen API Error: {err_val}")
                 return result
             elif status == "FAILED":
                 raise ValueError(f"Job failed: {data.get('error')}")
