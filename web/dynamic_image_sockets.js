@@ -68,7 +68,7 @@ app.registerExtension({
                 if (info && info.inputs) {
                     // Synchronously add image sockets saved in the JSON so ComfyUI links match
                     for (const input of info.inputs) {
-                        if ((input.name.startsWith("image_") && input.type === "IMAGE") || (input.name.startsWith("video_") && input.type === "VIDEO") || (input.name.startsWith("element_") && input.type === "ELEMENT") || (input.name.startsWith("frame_") && input.type === "IMAGE")) {
+                        if ((input.name.startsWith("image_") && input.type === "IMAGE") || (input.name.startsWith("video_") && input.type === "VIDEO") || (input.name.startsWith("element_") && input.type === "IMAGE") || (input.name.startsWith("frame_") && input.type === "IMAGE")) {
                             const exists = this.inputs && this.inputs.find(inp => inp.name === input.name);
                             if (!exists) {
                                 this.addInput(input.name, input.type);
@@ -127,10 +127,12 @@ app.registerExtension({
                                 }
                             }
                         } else if (node.inputs[i].name.startsWith("element_")) {
-                            const match = node.inputs[i].name.match(/element_(\d+)/);
+                            const match = node.inputs[i].name.match(/element_(\d+)(.*)/);
                             if (match) {
                                 const idx = parseInt(match[1]);
-                                if (idx > targetElements) {
+                                const suffix = match[2];
+                                const validSuffixes = ["_frontal", "_ref_1", "_ref_2", "_ref_3"];
+                                if (idx > targetElements || !validSuffixes.includes(suffix)) {
                                     node.removeInput(i);
                                 }
                             }
@@ -165,10 +167,13 @@ app.registerExtension({
 
                     // 4. Add any missing element_X sockets up to target amount
                     for (let i = 1; i <= targetElements; i++) {
-                        const socketName = `element_${i}`;
-                        const exists = node.inputs.find(inp => inp.name === socketName);
-                        if (!exists) {
-                            node.addInput(socketName, "ELEMENT");
+                        const suffixes = ["frontal", "ref_1", "ref_2", "ref_3"];
+                        for (const suffix of suffixes) {
+                            const socketName = `element_${i}_${suffix}`;
+                            const exists = node.inputs.find(inp => inp.name === socketName);
+                            if (!exists) {
+                                node.addInput(socketName, "IMAGE");
+                            }
                         }
                     }
 
