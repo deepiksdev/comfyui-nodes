@@ -8,6 +8,7 @@ node_list = [
     "video_node",
     "llm_node",
     "display_node",
+    "video_to_image_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}
