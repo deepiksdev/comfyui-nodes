@@ -22,39 +22,73 @@ class LLMNode:
     FUNCTION = "generate_text"
     CATEGORY = "DeepGen/LLM"
 
-    def generate_text(self, prompt, seed_value=-1, endpoint="https://api.deepgen.app", output_prefix="", **kwargs):
+    def generate_text(self, **kwargs):
         try:
             alias_id = getattr(self, "alias_id", "gemini-3-flash")
             
+            def unwrap(v):
+                return v[0] if isinstance(v, list) and len(v) > 0 else v
+
+            prompt = unwrap(kwargs.get("prompt", ""))
+            seed_value = unwrap(kwargs.get("seed_value", -1))
+            endpoint = unwrap(kwargs.get("endpoint", "https://api.deepgen.app"))
+            output_prefix = unwrap(kwargs.get("output_prefix", ""))
+            unique_id = unwrap(kwargs.get("unique_id"))
+            extra_pnginfo = unwrap(kwargs.get("extra_pnginfo"))
+            
             image_urls = []
             attachments_files = []
+            original_names_map = {}
+            
             for k, v in kwargs.items():
                 if v is None:
                     continue
-                if k in ["prompt", "seed_value", "endpoint", "output_prefix"]:
+                if k in ["prompt", "seed_value", "endpoint", "output_prefix", "unique_id", "extra_pnginfo"]:
                     continue
 
                 limit = 1
                 prefix_base = k
                 if k in ("image", "images"):
-                    limit = getattr(self, "num_images", 1)
+                    limit = 9999
                     prefix_base = "image"
                 elif k in ("video", "videos"):
-                    limit = getattr(self, "num_videos", 1)
+                    limit = 9999
                     prefix_base = "video"
                 elif k in ("frame", "frames"):
-                    limit = getattr(self, "num_frames", 1)
+                    limit = 9999
                     prefix_base = "frame"
                 elif k in ("element", "elements"):
-                    limit = getattr(self, "num_elements", 1)
+                    limit = 9999
                     prefix_base = "element"
                 elif k in ("mask", "masks"):
                     limit = 10
                     prefix_base = "mask"
 
+                if k not in original_names_map and unique_id and extra_pnginfo:
+                    original_names_map[k] = ImageUtils.resolve_filenames(unique_id, extra_pnginfo, k)
+                original_names = original_names_map.get(k, [])
+                
+                def get_orig_name(idx):
+                    if idx < len(original_names) and original_names[idx]:
+                        org = str(original_names[idx])
+                        if org.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.mp4')):
+                            org = org.rsplit('.', 1)[0]
+                        return f"_{org}"
+                    return ""
+
+                v_list = v if isinstance(v, list) else [v]
+                flattened_items = []
+                for item in v_list:
+                    if hasattr(item, "shape") and len(item.shape) == 4:
+                        for i in range(item.shape[0]):
+                            flattened_items.append(item[i:i+1])
+                    elif isinstance(item, list):
+                        flattened_items.extend(item)
+                    else:
+                        flattened_items.append(item)
+
                 if prefix_base == "element":
-                    elements = v if isinstance(v, list) else [v]
-                    for i, elem_dict in enumerate(elements[:limit], start=1):
+                    for i, elem_dict in enumerate(flattened_items[:limit], start=1):
                         if not isinstance(elem_dict, dict):
                             continue
                         
@@ -85,21 +119,12 @@ class LLMNode:
                                             attachments_files.append(attach)
                     continue
 
-                if hasattr(v, "shape"):
-                    img = v
-                    limit_n = min(limit, img.shape[0] if len(img.shape) == 4 else 1)
-                    if len(img.shape) == 4:
-                        for i in range(limit_n):
-                            attach = ImageUtils.get_attachment_file(img[i:i+1], filename=f"{prefix_base}_{i+1}.png")
-                            if attach:
-                                attachments_files.append(attach)
-                    else:
-                        attach = ImageUtils.get_attachment_file(img, filename=f"{prefix_base}_1.png")
+                for i, item in enumerate(flattened_items[:limit]):
+                    if hasattr(item, "shape"):
+                        attach = ImageUtils.get_attachment_file(item, filename=f"{prefix_base}_{i+1}{get_orig_name(i)}.png")
                         if attach:
                             attachments_files.append(attach)
-                else:
-                    items = v if isinstance(v, list) else [v]
-                    for i, item in enumerate(items[:limit], start=1):
+                    else:
                         vid_path = None
                         if isinstance(item, str):
                             try:
@@ -117,7 +142,14 @@ class LLMNode:
                             mime_type, _ = mimetypes.guess_type(vid_path)
                             mime_type = mime_type or "application/octet-stream"
                             original_name = os_mod.basename(vid_path)
-                            new_filename = f"{prefix_base}_{i}__{original_name}"
+                            orig_n = get_orig_name(i)
+                            
+                            if orig_n:
+                                ext = os_mod.path.splitext(original_name)[1]
+                                new_filename = f"{prefix_base}_{i+1}{orig_n}{ext}"
+                            else:
+                                new_filename = f"{prefix_base}_{i+1}__{original_name}"
+                                
                             with open(vid_path, "rb") as vf:
                                 b64 = base64.b64encode(vf.read()).decode("utf-8")
                                 attachments_files.append({

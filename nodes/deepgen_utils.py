@@ -220,6 +220,69 @@ class ImageUtils:
     """Utility functions for image processing."""
 
     @staticmethod
+    def resolve_filenames(unique_id, extra_pnginfo, input_name):
+        filenames = []
+        if not extra_pnginfo or not unique_id:
+            return filenames
+            
+        try:
+            workflow = extra_pnginfo.get("workflow", {})
+            nodes = workflow.get("nodes", [])
+            links = workflow.get("links", [])
+            
+            def find_link(link_id):
+                for l in links:
+                    if l[0] == link_id:
+                        return l
+                return None
+                
+            def find_node(node_id):
+                for n in nodes:
+                    if str(n.get("id")) == str(node_id):
+                        return n
+                return None
+                
+            def trace_back(node_id):
+                node = find_node(node_id)
+                if not node: return []
+                
+                if node.get("type") in ["LoadImage", "LoadVideo", "LoadImageMask", "VHS_LoadVideo"]:
+                    widgets = node.get("widgets_values", [])
+                    if widgets and isinstance(widgets[0], str):
+                        import os as os_mod
+                        return [os_mod.basename(widgets[0])]
+                        
+                names = []
+                if "inputs" in node:
+                    for inp in node["inputs"]:
+                        link_id = inp.get("link")
+                        if link_id is not None:
+                            link = find_link(link_id)
+                            if link:
+                                parent_names = trace_back(link[1])
+                                if parent_names:
+                                    names.extend(parent_names)
+                                else:
+                                    names.append("")
+                return names
+
+            current_node = find_node(unique_id)
+            if current_node and "inputs" in current_node:
+                for inp in current_node["inputs"]:
+                    if inp.get("name") == input_name:
+                        link_id = inp.get("link")
+                        if link_id is not None:
+                            link = find_link(link_id)
+                            if link:
+                                return trace_back(link[1])
+                                
+        except Exception as e:
+            pass
+            
+        return filenames
+
+
+    @staticmethod
     def tensor_to_pil(image):
         """Convert image tensor to PIL Image."""
         try:
@@ -727,8 +790,8 @@ class DeepGenApiHandler:
                 "Content-Type": "application/json"
             }
             
-            #rint(f"Submitting to {url}")
-            #rint(f"Mapped Arguments: {mapped_arguments}")
+            print(f"SUBMITTING TO {url}")
+            print(f"MAPPED ARGUMENTS NUMBER: {len(mapped_arguments)}")
             response = requests.post(url, json=mapped_arguments, headers=headers)
             
             if response.status_code == 200:

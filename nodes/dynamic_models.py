@@ -137,7 +137,7 @@ def load_models():
                             optional["mask"] = ("IMAGE",)
 
 
-                        return {"required": required, "optional": optional}
+                        return {"required": required, "optional": optional, "hidden": {"extra_pnginfo": "EXTRA_PNGINFO", "unique_id": "UNIQUE_ID"}}
                     return INPUT_TYPES
 
                 new_class = type(class_name, (base_class,), {
