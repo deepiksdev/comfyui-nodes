@@ -44,7 +44,7 @@ class ImageNode:
             "pixel_size": ([""], {"default": ""}),
             
             # Additional T2I fields
-            "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 2.0, "step": 0.1}),
+            "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
             "cfg_scale": ("FLOAT", {"default": 7.0, "min": 0.0, "max": 30.0, "step": 0.5}),
             "steps": ("INT", {"default": 20, "min": 1, "max": 150}),
             "loras": ("STRING", {"default": ""}),
@@ -59,7 +59,7 @@ class ImageNode:
 
         return {
             "required": {
-                "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
+                "model": ([""] + cls.models_list, {"default": ""}),
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
             },

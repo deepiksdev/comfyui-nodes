@@ -37,7 +37,7 @@ class VideoNode:
 
         return {
             "required": {
-                "model": (cls.models_list, {"default": cls.models_list[0] if cls.models_list else ""}),
+                "model": ([""] + cls.models_list, {"default": ""}),
                 "prompt": ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
@@ -52,7 +52,7 @@ class VideoNode:
                 "resolution": ([""], {"default": ""}),
                 
                 # Additional T2V fields
-                "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 2.0, "step": 0.1}),
+                "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.1}),
                 "cfg_scale": ("FLOAT", {"default": 7.0, "min": 0.0, "max": 30.0, "step": 0.5}),
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
                 "queue": ("BOOLEAN", {"default": False}),
