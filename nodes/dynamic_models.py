@@ -111,15 +111,31 @@ def load_models():
                                 optional[inp] = all_optional[inp]
 
                         # Sockets
-                        for i in range(1, n_img + 1):
-                            optional[f"image_{i}"] = ("IMAGE",)
-                        for i in range(1, n_vid + 1):
-                            optional[f"video_{i}"] = ("VIDEO",)
-                        for i in range(1, n_frames + 1):
-                            optional[f"frame_{i}"] = ("IMAGE",)
-                        for i in range(1, n_elem + 1):
-                            for suffix in ["frontal", "ref_1", "ref_2", "ref_3"]:
-                                optional[f"element_{i}_{suffix}"] = ("IMAGE",)
+                        if n_img == 1:
+                            optional["image"] = ("IMAGE",)
+                        elif n_img > 1:
+                            optional["images"] = ("IMAGE",)
+                            
+                        if n_vid == 1:
+                            optional["video"] = ("VIDEO",)
+                        elif n_vid > 1:
+                            optional["videos"] = ("VIDEO",)
+                            
+                        if n_frames == 1:
+                            optional["frame"] = ("IMAGE",)
+                        elif n_frames > 1:
+                            optional["frames"] = ("IMAGE",)
+                            
+                        if n_elem == 1:
+                            optional["element"] = ("ELEMENT",)
+                        elif n_elem > 1:
+                            optional["elements"] = ("ELEMENT",)
+                            
+                        if "masks" in sup_inps:
+                            optional["masks"] = ("IMAGE",)
+                        elif "mask" in sup_inps or "mask_image" in sup_inps:
+                            optional["mask"] = ("IMAGE",)
+
 
                         return {"required": required, "optional": optional}
                     return INPUT_TYPES
@@ -127,7 +143,11 @@ def load_models():
                 new_class = type(class_name, (base_class,), {
                     "INPUT_TYPES": make_input_types(base_class, supported_inputs, aspect_ratios, resolutions, pixel_sizes, num_images, num_videos, num_elements, num_frames),
                     "alias_id": alias_id,
-                    "supported_inputs": supported_inputs
+                    "supported_inputs": supported_inputs,
+                    "num_images": num_images,
+                    "num_videos": num_videos,
+                    "num_elements": num_elements,
+                    "num_frames": num_frames,
                 })
                 
                 NODE_CLASS_MAPPINGS[class_name] = new_class
