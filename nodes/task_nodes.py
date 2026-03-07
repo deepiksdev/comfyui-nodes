@@ -74,6 +74,83 @@ def process_kwargs_for_images(kwargs, unique_id, extra_pnginfo):
 
     return attachments_files
 
+def parse_ratio(r_str):
+    if r_str.lower() == 'auto':
+        return 1.0
+    try:
+        w, h = map(float, r_str.split(':'))
+        return w / h
+    except:
+        return 1.0
+
+def parse_res_k(res_str):
+    res_str = str(res_str).lower().replace('k', '')
+    try:
+        if res_str == '500':
+            return 500
+        return float(res_str) * 1024
+    except:
+        return 1024
+
+def get_best_resolution(resolutions, target_size, target_ratio):
+    parsed = []
+    for res in resolutions:
+        try:
+            w, h = map(int, res.split('x'))
+            ratio = w / h
+            size = w * h
+            parsed.append({'res': res, 'ratio': ratio, 'size': size})
+        except:
+            pass
+    if not parsed:
+        return None
+        
+    valid_ratios = [p for p in parsed if p['ratio'] >= target_ratio]
+    if valid_ratios:
+        best_ratio = min(valid_ratios, key=lambda x: x['ratio'])['ratio']
+    else:
+        best_ratio = max(parsed, key=lambda x: x['ratio'])['ratio']
+        
+    best_ratio_items = [p for p in parsed if abs(p['ratio'] - best_ratio) < 0.01]
+    
+    target_area = target_size * target_size
+    valid_sizes = [p for p in best_ratio_items if p['size'] >= target_area]
+    if valid_sizes:
+        best_item = min(valid_sizes, key=lambda x: x['size'])
+    else:
+        best_item = max(best_ratio_items, key=lambda x: x['size'])
+        
+    return best_item['res']
+
+def get_best_pixel_size_and_ratio(pixel_sizes, aspect_ratios, target_size, target_ratio):
+    parsed_ar = []
+    for ar in aspect_ratios:
+        parsed_ar.append({'ar': ar, 'ratio': parse_ratio(ar)})
+    
+    if parsed_ar:
+        valid_ar = [p for p in parsed_ar if p['ratio'] >= target_ratio]
+        if valid_ar:
+            best_ar = min(valid_ar, key=lambda x: x['ratio'])['ar']
+        else:
+            best_ar = max(parsed_ar, key=lambda x: x['ratio'])['ar']
+    else:
+        best_ar = None
+
+    parsed_ps = []
+    for ps in pixel_sizes:
+        parsed_ps.append({'ps': ps, 'size': parse_res_k(ps)})
+        
+    if parsed_ps:
+        valid_ps = [p for p in parsed_ps if p['size'] >= target_size]
+        if valid_ps:
+            best_ps = min(valid_ps, key=lambda x: x['size'])['ps']
+        else:
+            best_ps = max(parsed_ps, key=lambda x: x['size'])['ps']
+    else:
+        best_ps = None
+        
+    return best_ps, best_ar
+
 class BaseTaskNode:
     @classmethod
     def INPUT_TYPES(cls):
@@ -108,10 +185,45 @@ class BaseTaskNode:
         if task_type in ["T2I", "I2I", "I2I3", "I2I10", "T2V", "V2VR"]:
             arguments["num_images"] = nb_results # used for both image and video
             
-        if minimum_resolution:
-            arguments["resolution"] = minimum_resolution
-        if aspect_ratio:
-            arguments["aspect_ratio"] = aspect_ratio
+        csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models.csv")
+        resolutions_supported, aspect_ratios_supported, pixel_sizes_supported = [], [], []
+        try:
+            with open(csv_path, mode='r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if row and row[0] == model:
+                        if len(row) > 3 and row[3].strip():
+                            aspect_ratios_supported = [x.strip() for x in row[3].split(",")]
+                        if len(row) > 4 and row[4].strip():
+                            pixel_sizes_supported = [x.strip() for x in row[4].split(",")]
+                        if len(row) > 5 and row[5].strip():
+                            resolutions_supported = [x.strip() for x in row[5].split(",")]
+                        break
+        except Exception:
+            pass
+
+        if minimum_resolution and aspect_ratio and (resolutions_supported or pixel_sizes_supported):
+            target_size = parse_res_k(minimum_resolution)
+            target_ratio = parse_ratio(aspect_ratio)
+            
+            if resolutions_supported:
+                best_res = get_best_resolution(resolutions_supported, target_size, target_ratio)
+                if best_res:
+                    arguments["resolution"] = best_res
+            elif pixel_sizes_supported:
+                best_ps, best_ar = get_best_pixel_size_and_ratio(
+                    pixel_sizes_supported, aspect_ratios_supported, target_size, target_ratio
+                )
+                if best_ps:
+                    arguments["pixel_size"] = best_ps
+                if best_ar:
+                    arguments["aspect_ratio"] = best_ar
+        else:
+            if minimum_resolution:
+                arguments["resolution"] = minimum_resolution
+            if aspect_ratio:
+                arguments["aspect_ratio"] = aspect_ratio
+                
         if output_format:
             arguments["output_format"] = output_format
 
@@ -276,8 +388,8 @@ class T2INode(BaseTaskNode):
                 "config_json": ("STRING", {"default": "", "multiline": True}),
             },
             "optional": {
-                "minimum_resolution": ("STRING", {"default": ""}),
-                "aspect_ratio": ("STRING", {"default": ""}),
+                "minimum_resolution": (["500", "1K", "2K", "4K"], {"default": "1K"}),
+                "aspect_ratio": (["1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3", "5:4", "4:5", "21:9", "4:1", "1:4", "8:1", "1:8"], {"default": "1:1"}),
                 "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
             },
             "hidden": {"extra_pnginfo": "EXTRA_PNGINFO", "unique_id": "UNIQUE_ID"}
@@ -306,8 +418,8 @@ class I2INode(BaseTaskNode):
                 "image_1": ("IMAGE",),
             },
             "optional": {
-                "minimum_resolution": ("STRING", {"default": ""}),
-                "aspect_ratio": ("STRING", {"default": ""}),
+                "minimum_resolution": (["500", "1K", "2K", "4K"], {"default": "1K"}),
+                "aspect_ratio": (["1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3", "5:4", "4:5", "21:9", "4:1", "1:4", "8:1", "1:8"], {"default": "1:1"}),
                 "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
             },
             "hidden": {"extra_pnginfo": "EXTRA_PNGINFO", "unique_id": "UNIQUE_ID"}
@@ -338,8 +450,8 @@ class I2I3Node(BaseTaskNode):
                 "image_3": ("IMAGE",),
             },
             "optional": {
-                "minimum_resolution": ("STRING", {"default": ""}),
-                "aspect_ratio": ("STRING", {"default": ""}),
+                "minimum_resolution": (["500", "1K", "2K", "4K"], {"default": "1K"}),
+                "aspect_ratio": (["1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3", "5:4", "4:5", "21:9", "4:1", "1:4", "8:1", "1:8"], {"default": "1:1"}),
                 "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
             },
             "hidden": {"extra_pnginfo": "EXTRA_PNGINFO", "unique_id": "UNIQUE_ID"}
@@ -369,8 +481,8 @@ class I2I10Node(BaseTaskNode):
                 **required_images
             },
             "optional": {
-                "minimum_resolution": ("STRING", {"default": ""}),
-                "aspect_ratio": ("STRING", {"default": ""}),
+                "minimum_resolution": (["500", "1K", "2K", "4K"], {"default": "1K"}),
+                "aspect_ratio": (["1:1", "9:16", "16:9", "3:4", "4:3", "3:2", "2:3", "5:4", "4:5", "21:9", "4:1", "1:4", "8:1", "1:8"], {"default": "1:1"}),
                 "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
             },
             "hidden": {"extra_pnginfo": "EXTRA_PNGINFO", "unique_id": "UNIQUE_ID"}
