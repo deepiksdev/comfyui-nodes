@@ -1,5 +1,5 @@
 [project]
-name = "comfyui-deepgen-api"
+name = "deepgen-api"
 description = "ComfyUI nodes for DeepGen API"
 version = "1.1.0"
 license = {file = "LICENSE"}
