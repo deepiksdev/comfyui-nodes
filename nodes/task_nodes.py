@@ -466,10 +466,10 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "DeepGen_T2T": "LLM",
     "DeepGen_I2T": "Vision",
-    "DeepGen_T2I": "Text to Image",
-    "DeepGen_I2I": "Image to Image",
-    "DeepGen_I2I3": "3 Images to Image",
-    "DeepGen_I2I10": "10 Images to Image",
-    "DeepGen_T2V": "Text to Video",
-    "DeepGen_V2VR": "Video Image And Reference to Video",
+    "DeepGen_T2I": "Image (from text)",
+    "DeepGen_I2I": "Image (from 1 image)",
+    "DeepGen_I2I3": "Image (from 3 images)",
+    "DeepGen_I2I10": "Image (from 10 images)",
+    "DeepGen_T2V": "Video (from text)",
+    "DeepGen_V2VR": "Video (from video, images and references)",
 }
