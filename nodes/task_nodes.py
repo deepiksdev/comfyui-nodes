@@ -160,6 +160,69 @@ class BaseTaskNode:
     def VALIDATE_INPUTS(cls, **kwargs):
         return True
 
+    def _poll_video_results(self, results):
+        import time
+        import requests
+        from .deepgen_utils import DeepGenConfig
+        
+        config = DeepGenConfig()
+        key = config.get_key()
+        if not key:
+            raise ValueError("DeepGen API Key not found.")
+        user_id = key.split("_")[0] if "_" in key else ""
+        
+        base_url = config.get_base_url()
+        if base_url.endswith("/"):
+            base_url = base_url[:-1]
+            
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json"
+        }
+
+        final_results = [None] * len(results)
+        pending = {}
+        
+        for i, res in enumerate(results):
+            res_list = res if isinstance(res, list) else [res]
+            res_obj = res_list[0] if len(res_list) > 0 else {}
+            if not isinstance(res_obj, dict):
+                res_obj = getattr(res_obj, '__dict__', {}) or {}
+                
+            if res_obj.get("status") == "queued" and "queue_id" in res_obj:
+                agent_alias = res_obj.get("agent_alias", "_")
+                q_id = res_obj["queue_id"]
+                pending[i] = (q_id, agent_alias)
+                print(f"DeepGen Video: Queued generation with queue_id: {q_id} (model: {agent_alias})")
+            else:
+                final_results[i] = res
+
+        while pending:
+            print(f"DeepGen Video: Polling {len(pending)} pending generation(s)...")
+            time.sleep(15)
+            completed_indices = []
+            for idx, (queue_id, agent_alias) in pending.items():
+                poll_url = f"{base_url}/users/{user_id}/agents/{agent_alias}/turns/{queue_id}"
+                try:
+                    poll_response = requests.get(poll_url, headers=headers)
+                    if poll_response.status_code == 200:
+                        poll_data = poll_response.json()
+                        if isinstance(poll_data, dict) and "output" in poll_data:
+                            final_results[idx] = poll_data
+                            completed_indices.append(idx)
+                            print(f"DeepGen Video: Generation completed for queue_id: {queue_id}")
+                        elif isinstance(poll_data, dict) and poll_data.get("status") in ["failed", "error"]:
+                            raise ValueError(f"Video generation failed: {poll_data}")
+                    else:
+                        raise ValueError(f"Polling failed with status {poll_response.status_code}: {poll_response.text}")
+                except Exception as e:
+                    raise ValueError(f"Polling error for queue_id {queue_id}: {str(e)}")
+            
+            for idx in completed_indices:
+                del pending[idx]
+                
+        return final_results
+
     def run_generation(self, task_type, **kwargs):
         def unwrap(v):
             return v[0] if isinstance(v, list) and len(v) > 0 else v
@@ -173,7 +236,6 @@ class BaseTaskNode:
         minimum_resolution = unwrap(kwargs.get("minimum_resolution", ""))
         aspect_ratio = unwrap(kwargs.get("aspect_ratio", ""))
         output_format = unwrap(kwargs.get("output_format", ""))
-        endpoint = unwrap(kwargs.get("endpoint"))
         unique_id = unwrap(kwargs.get("unique_id"))
         extra_pnginfo = unwrap(kwargs.get("extra_pnginfo"))
 
@@ -184,6 +246,9 @@ class BaseTaskNode:
         
         if task_type in ["T2I", "I2I", "I2I3", "I2I10", "T2V", "V2VR"]:
             arguments["num_images"] = nb_results # used for both image and video
+            
+        if task_type in ["T2V", "V2VR"]:
+            arguments["queue"] = True
             
         csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models.csv")
         resolutions_supported, aspect_ratios_supported, pixel_sizes_supported = [], [], []
@@ -237,15 +302,14 @@ class BaseTaskNode:
         try:
             if task_type in ["T2V", "V2VR"]:
                 if nb_results > 1:
-                    results = ApiHandler.submit_multiple_and_get_results(model, arguments, nb_results, api_url=endpoint)
-                    # For video, polling might be needed. Using submit_and_get_result for now.
-                    # As batch video is rare, we default to sequential handling
+                    results = ApiHandler.submit_multiple_and_get_results(model, arguments, nb_results)
+                    results = self._poll_video_results(results)
+                    
                     outputs = []
                     credits_out = 0.0
-                    for _ in range(nb_results):
-                        result = ApiHandler.submit_and_get_result(model, arguments, api_url=endpoint)
-                        outputs.append(ResultProcessor.process_video_result(result)[0])
-                        obj = result[0] if isinstance(result, list) and len(result) > 0 else result
+                    for r in results:
+                        outputs.append(ResultProcessor.process_video_result(r)[0])
+                        obj = r[0] if isinstance(r, list) and len(r) > 0 else r
                         cred = obj.get("total_credits_used") if isinstance(obj, dict) else 0.0
                         if cred is None:
                             cred = obj.get("output", {}).get("total_credits_used", obj.get("aiCredits", 0.0))
@@ -253,7 +317,9 @@ class BaseTaskNode:
                     prefixed_model = f"{output_prefix}_{model}" if output_prefix else model
                     return (outputs[0], prefixed_model, credits_out) # returning first video
                 else:
-                    result = ApiHandler.submit_and_get_result(model, arguments, api_url=endpoint)
+                    result = ApiHandler.submit_and_get_result(model, arguments)
+                    result = self._poll_video_results([result])[0]
+                    
                     res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
                     video_path = ResultProcessor.process_video_result(result)[0]
                     
@@ -276,7 +342,7 @@ class BaseTaskNode:
 
             elif task_type in ["T2T", "I2T"]:
                 arguments["stream"] = False
-                result = ApiHandler.submit_and_get_result(model, arguments, api_url=endpoint)
+                result = ApiHandler.submit_and_get_result(model, arguments)
                 res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
                 text_result = ResultProcessor.process_text_result(result)[0]
                 
@@ -298,7 +364,7 @@ class BaseTaskNode:
 
             else:
                 # Images
-                result = ApiHandler.submit_and_get_result(model, arguments, api_url=endpoint)
+                result = ApiHandler.submit_and_get_result(model, arguments)
                 res_obj = result[0] if isinstance(result, list) and len(result) > 0 else result
                 img_tensor = ResultProcessor.process_image_result(result)[0]
                 
