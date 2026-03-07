@@ -178,10 +178,12 @@ class DeepGenConfig:
             user_config_path = os.path.join(user_dir, "config.json")
             raise ValueError(f"DEEPGEN_API_KEY is missing. Please click the ComfyUI Settings gear icon and enter your DeepGen API Key to use the nodes.")
 
-    def set_key(self, api_key):
-        """Set the DeepGen API key and save it to config.json."""
+    def set_key_and_url(self, api_key, api_url):
+        """Set the DeepGen API key and URL, and save them to config.json."""
         self._key = api_key
+        self._base_url = api_url
         os.environ["DEEPGEN_API_KEY"] = api_key
+        os.environ["DEEPGEN_API_URL"] = api_url
         
         try:
             import folder_paths
@@ -205,6 +207,7 @@ class DeepGenConfig:
                 pass
                 
         user_config["DEEPGEN_API_KEY"] = api_key
+        user_config["DEEPGEN_API_URL"] = api_url
         
         os.makedirs(user_dir, exist_ok=True)
         try:
