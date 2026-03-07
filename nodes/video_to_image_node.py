@@ -16,7 +16,7 @@ class VideoToImageNode:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "extract_frame"
-    CATEGORY = "DeepGen/VideoGeneration"
+    CATEGORY = "DeepGen/Utilities"
 
     def extract_frame(self, video, frame_index=0):
         # Get path from ComfyVideoMock or string
@@ -56,5 +56,5 @@ NODE_CLASS_MAPPINGS = {
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "VideoToImage_deepgen": "Video to Image (deepgen)",
+    "VideoToImage_deepgen": "Extract Frame From Video",
 }

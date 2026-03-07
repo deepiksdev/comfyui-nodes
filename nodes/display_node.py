@@ -11,7 +11,7 @@ class DisplayFloatNode:
     RETURN_NAMES = ("text",)
     OUTPUT_NODE = True
     FUNCTION = "display_float"
-    CATEGORY = "DeepGen/Display"
+    CATEGORY = "DeepGen/Utilities"
 
     def display_float(self, float_val):
         text_val = str(float_val)
@@ -24,5 +24,5 @@ NODE_CLASS_MAPPINGS = {
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "DisplayFloat_deepgen": "Display Float (deepgen)",
+    "DisplayFloat_deepgen": "Display Float",
 }
