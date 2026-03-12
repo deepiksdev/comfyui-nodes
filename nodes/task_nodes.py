@@ -410,7 +410,7 @@ class T2TNode(BaseTaskNode):
     RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
     RETURN_NAMES = ("output", "model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/01 Invoke LLM"
 
     def generate(self, **kwargs):
         return self.run_generation("T2T", **kwargs)
@@ -436,7 +436,7 @@ class I2TNode(BaseTaskNode):
     RETURN_TYPES = ("STRING", "STRING", "FLOAT",)
     RETURN_NAMES = ("output", "model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/02 Review Images"
 
     def generate(self, **kwargs):
         return self.run_generation("I2T", **kwargs)
@@ -465,7 +465,7 @@ class T2INode(BaseTaskNode):
     RETURN_TYPES = ("IMAGE", "STRING", "FLOAT",)
     RETURN_NAMES = ("IMAGE", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/03 Generate Image (from Text)"
 
     def generate(self, **kwargs):
         return self.run_generation("T2I", **kwargs)
@@ -495,7 +495,7 @@ class I2INode(BaseTaskNode):
     RETURN_TYPES = ("IMAGE", "STRING", "FLOAT",)
     RETURN_NAMES = ("IMAGE", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/04 Edit Image"
 
     def generate(self, **kwargs):
         return self.run_generation("I2I", **kwargs)
@@ -527,7 +527,7 @@ class I2I3Node(BaseTaskNode):
     RETURN_TYPES = ("IMAGE", "STRING", "FLOAT",)
     RETURN_NAMES = ("IMAGE", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/05 Generate Image (from 3 Images)"
 
     def generate(self, **kwargs):
         return self.run_generation("I2I3", **kwargs)
@@ -558,7 +558,7 @@ class I2I10Node(BaseTaskNode):
     RETURN_TYPES = ("IMAGE", "STRING", "FLOAT",)
     RETURN_NAMES = ("IMAGE", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/06 Generate Image (from 10 Images)"
 
     def generate(self, **kwargs):
         return self.run_generation("I2I10", **kwargs)
@@ -585,7 +585,7 @@ class T2VNode(BaseTaskNode):
     RETURN_TYPES = ("VIDEO", "STRING", "FLOAT",)
     RETURN_NAMES = ("VIDEO", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/07 Generate Video (from Text)"
 
     def generate(self, **kwargs):
         return self.run_generation("T2V", **kwargs)
@@ -613,7 +613,7 @@ class I2VNode(BaseTaskNode):
     RETURN_TYPES = ("VIDEO", "STRING", "FLOAT",)
     RETURN_NAMES = ("VIDEO", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/08 Generate Video (from Start Frame)"
 
     def generate(self, **kwargs):
         return self.run_generation("I2V", **kwargs)
@@ -642,7 +642,7 @@ class I2V2Node(BaseTaskNode):
     RETURN_TYPES = ("VIDEO", "STRING", "FLOAT",)
     RETURN_NAMES = ("VIDEO", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/09 Generate Video (from Start and End Frames)"
 
     def generate(self, **kwargs):
         return self.run_generation("I2V2", **kwargs)
@@ -676,7 +676,7 @@ class I2VRNode(BaseTaskNode):
     RETURN_TYPES = ("VIDEO", "STRING", "FLOAT",)
     RETURN_NAMES = ("VIDEO", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/10 Generate Video (from Images with Elements)"
 
     def generate(self, **kwargs):
         return self.run_generation("I2VR", **kwargs)
@@ -704,7 +704,7 @@ class V2VNode(BaseTaskNode):
     RETURN_TYPES = ("VIDEO", "STRING", "FLOAT",)
     RETURN_NAMES = ("VIDEO", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/11 Edit Video"
 
     def generate(self, **kwargs):
         return self.run_generation("V2V", **kwargs)
@@ -740,38 +740,38 @@ class V2VRNode(BaseTaskNode):
     RETURN_TYPES = ("VIDEO", "STRING", "FLOAT",)
     RETURN_NAMES = ("VIDEO", "output_prefix_and_model", "total_credits_used",)
     FUNCTION = "generate"
-    CATEGORY = "DeepGen/Generators"
+    CATEGORY = "DeepGen/12 Edit Video (with Elements)"
 
     def generate(self, **kwargs):
         return self.run_generation("V2VR", **kwargs)
 
 NODE_CLASS_MAPPINGS = {
-    "DeepGen_01_T2T": T2TNode,
-    "DeepGen_02_I2T": I2TNode,
-    "DeepGen_03_T2I": T2INode,
-    "DeepGen_04_I2I": I2INode,
-    "DeepGen_05_I2I3": I2I3Node,
-    "DeepGen_06_I2I10": I2I10Node,
-    "DeepGen_07_T2V": T2VNode,
-    "DeepGen_08_I2V": I2VNode,
-    "DeepGen_09_I2V2": I2V2Node,
-    "DeepGen_10_I2VR": I2VRNode,
-    "DeepGen_11_V2V": V2VNode,
-    "DeepGen_12_V2VR": V2VRNode,
+    "DeepGen_T2T": T2TNode,
+    "DeepGen_I2T": I2TNode,
+    "DeepGen_T2I": T2INode,
+    "DeepGen_I2I": I2INode,
+    "DeepGen_I2I3": I2I3Node,
+    "DeepGen_I2I10": I2I10Node,
+    "DeepGen_T2V": T2VNode,
+    "DeepGen_I2V": I2VNode,
+    "DeepGen_I2V2": I2V2Node,
+    "DeepGen_I2VR": I2VRNode,
+    "DeepGen_V2V": V2VNode,
+    "DeepGen_V2VR": V2VRNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "DeepGen_01_T2T": "01 · Invoke LLM",
-    "DeepGen_02_I2T": "02 · Review Images",
-    "DeepGen_03_T2I": "03 · Generate Image (from Text)",
-    "DeepGen_04_I2I": "04 · Edit Image",
-    "DeepGen_05_I2I3": "05 · Generate Image (from 3 Images)",
-    "DeepGen_06_I2I10": "06 · Generate Image (from 10 Images)",
-    "DeepGen_07_T2V": "07 · Generate Video (from Text)",
-    "DeepGen_08_I2V": "08 · Generate Video (from Start Frame)",
-    "DeepGen_09_I2V2": "09 · Generate Video (from Start and End Frames)",
-    "DeepGen_10_I2VR": "10 · Generate Video (from Images with Elements)",
-    "DeepGen_11_V2V": "11 · Edit Video",
-    "DeepGen_12_V2VR": "12 · Edit Video (with Elements)",
+    "DeepGen_T2T": "Invoke LLM",
+    "DeepGen_I2T": "Review Images",
+    "DeepGen_T2I": "Generate Image (from Text)",
+    "DeepGen_I2I": "Edit Image",
+    "DeepGen_I2I3": "Generate Image (from 3 Images)",
+    "DeepGen_I2I10": "Generate Image (from 10 Images)",
+    "DeepGen_T2V": "Generate Video (from Text)",
+    "DeepGen_I2V": "Generate Video (from Start Frame)",
+    "DeepGen_I2V2": "Generate Video (from Start and End Frames)",
+    "DeepGen_I2VR": "Generate Video (from Images with Elements)",
+    "DeepGen_V2V": "Edit Video",
+    "DeepGen_V2VR": "Edit Video (with Elements)",
 }
 
