@@ -761,17 +761,17 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "DeepGen_01_T2T": "Invoke LLM",
-    "DeepGen_02_I2T": "Review Images",
-    "DeepGen_03_T2I": "Generate Image (from Text)",
-    "DeepGen_04_I2I": "Edit Image",
-    "DeepGen_05_I2I3": "Generate Image (from 3 Images)",
-    "DeepGen_06_I2I10": "Generate Image (from 10 Images)",
-    "DeepGen_07_T2V": "Generate Video (from Text)",
-    "DeepGen_08_I2V": "Generate Video (from Start Frame)",
-    "DeepGen_09_I2V2": "Generate Video (from Start and End Frames)",
-    "DeepGen_10_I2VR": "Generate Video (from Images with Elements)",
-    "DeepGen_11_V2V": "Edit Video",
-    "DeepGen_12_V2VR": "Edit Video (with Elements)",
+    "DeepGen_01_T2T": "01 · Invoke LLM",
+    "DeepGen_02_I2T": "02 · Review Images",
+    "DeepGen_03_T2I": "03 · Generate Image (from Text)",
+    "DeepGen_04_I2I": "04 · Edit Image",
+    "DeepGen_05_I2I3": "05 · Generate Image (from 3 Images)",
+    "DeepGen_06_I2I10": "06 · Generate Image (from 10 Images)",
+    "DeepGen_07_T2V": "07 · Generate Video (from Text)",
+    "DeepGen_08_I2V": "08 · Generate Video (from Start Frame)",
+    "DeepGen_09_I2V2": "09 · Generate Video (from Start and End Frames)",
+    "DeepGen_10_I2VR": "10 · Generate Video (from Images with Elements)",
+    "DeepGen_11_V2V": "11 · Edit Video",
+    "DeepGen_12_V2VR": "12 · Edit Video (with Elements)",
 }
 
