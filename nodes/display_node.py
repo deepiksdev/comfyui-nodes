@@ -19,10 +19,10 @@ class DisplayFloatNode:
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "DisplayFloat_deepgen": DisplayFloatNode,
+    "DeepGen_F2T0": DisplayFloatNode,
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "DisplayFloat_deepgen": "Display Float",
+    "DeepGen_F2T0": "Display Float",
 }

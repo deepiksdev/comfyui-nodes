@@ -51,10 +51,10 @@ class VideoToImageNode:
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "VideoToImage_deepgen": VideoToImageNode,
+    "DeepGen_VTI0": VideoToImageNode,
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "VideoToImage_deepgen": "Extract Frame From Video",
+    "DeepGen_VTI0": "Extract Frame From Video",
 }
