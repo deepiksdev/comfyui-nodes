@@ -1,4 +1,5 @@
 import importlib
+import logging
 
 from .nodes import api_routes
 from .nodes.task_nodes import (
@@ -27,6 +28,8 @@ NODE_CLASS_MAPPINGS = {
     **DISPLAY_MAPPINGS,
     **VTI_MAPPINGS,
 }
+
+logging.info("[DeepGen] NODE_CLASS_MAPPINGS insertion order: %s", list(NODE_CLASS_MAPPINGS.keys()))
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "DeepGen_T2T": "Invoke LLM",
