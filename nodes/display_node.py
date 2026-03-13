@@ -1,4 +1,3 @@
-print("DeepGen: Loading DisplayFloatNode...")
 class DisplayFloatNode:
     @classmethod
     def INPUT_TYPES(cls):
