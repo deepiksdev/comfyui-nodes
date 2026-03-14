@@ -92,14 +92,14 @@ def parse_res_k(res_str):
     except:
         return 1024
 
-def get_best_resolution(resolutions, target_size, target_ratio):
+def get_best_pixel_size(pixel_sizes, target_size, target_ratio):
     parsed = []
-    for res in resolutions:
+    for ps in pixel_sizes:
         try:
-            w, h = map(int, res.split('x'))
+            w, h = map(int, ps.split('x'))
             ratio = w / h
             size = w * h
-            parsed.append({'res': res, 'ratio': ratio, 'size': size})
+            parsed.append({'ps': ps, 'ratio': ratio, 'size': size})
         except:
             pass
     if not parsed:
@@ -120,9 +120,9 @@ def get_best_resolution(resolutions, target_size, target_ratio):
     else:
         best_item = max(best_ratio_items, key=lambda x: x['size'])
         
-    return best_item['res']
+    return best_item['ps']
 
-def get_best_pixel_size_and_ratio(pixel_sizes, aspect_ratios, target_size, target_ratio):
+def get_best_resolution_and_ratio(resolutions, aspect_ratios, target_size, target_ratio):
     parsed_ar = []
     for ar in aspect_ratios:
         parsed_ar.append({'ar': ar, 'ratio': parse_ratio(ar)})
@@ -136,20 +136,20 @@ def get_best_pixel_size_and_ratio(pixel_sizes, aspect_ratios, target_size, targe
     else:
         best_ar = None
 
-    parsed_ps = []
-    for ps in pixel_sizes:
-        parsed_ps.append({'ps': ps, 'size': parse_res_k(ps)})
+    parsed_res = []
+    for r in resolutions:
+        parsed_res.append({'res': r, 'size': parse_res_k(r)})
         
-    if parsed_ps:
-        valid_ps = [p for p in parsed_ps if p['size'] >= target_size]
-        if valid_ps:
-            best_ps = min(valid_ps, key=lambda x: x['size'])['ps']
+    if parsed_res:
+        valid_res = [p for p in parsed_res if p['size'] >= target_size]
+        if valid_res:
+            best_res = min(valid_res, key=lambda x: x['size'])['res']
         else:
-            best_ps = max(parsed_ps, key=lambda x: x['size'])['ps']
+            best_res = max(parsed_res, key=lambda x: x['size'])['res']
     else:
-        best_ps = None
+        best_res = None
         
-    return best_ps, best_ar
+    return best_res, best_ar
 
 class BaseTaskNode:
     @classmethod
@@ -272,16 +272,17 @@ class BaseTaskNode:
             target_size = parse_res_k(minimum_resolution)
             target_ratio = parse_ratio(aspect_ratio)
             
-            if resolutions_supported:
-                best_res = get_best_resolution(resolutions_supported, target_size, target_ratio)
-                if best_res:
-                    arguments["resolution"] = best_res
-            elif pixel_sizes_supported:
-                best_ps, best_ar = get_best_pixel_size_and_ratio(
-                    pixel_sizes_supported, aspect_ratios_supported, target_size, target_ratio
-                )
+            if pixel_sizes_supported:
+                best_ps = get_best_pixel_size(pixel_sizes_supported, target_size, target_ratio)
                 if best_ps:
                     arguments["pixel_size"] = best_ps
+                    # When pixel size is found, we don't submit aspect_ratio and resolution
+            elif resolutions_supported:
+                best_res, best_ar = get_best_resolution_and_ratio(
+                    resolutions_supported, aspect_ratios_supported, target_size, target_ratio
+                )
+                if best_res:
+                    arguments["resolution"] = best_res
                 if best_ar:
                     arguments["aspect_ratio"] = best_ar
         else:
